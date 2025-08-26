@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario con Código de Barra</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+    }
+    .scanner {
+      margin: 20px auto;
+      max-width: 600px;
+      text-align: center;
+    }
+    video {
+      width: 100%;
+      border: 2px solid #007bff;
+    }
+    .form {
+      margin-top: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .inventory-list {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Inventario con Código de Barra</h1>
+  </header>
+
+  <div class="scanner">
+    <h2>Escáner</h2>
+    <video id="preview"></video>
+    <button onclick="startScanner()">Iniciar escaneo</button>
+  </div>
+
+  <div class="form">
+    <h2>Registrar producto</h2>
+    <input type="text" id="barcode" placeholder="Código de barra escaneado">
+    <input type="text" id="productName" placeholder="Nombre del producto">
+    <input type="number" id="quantity" placeholder="Cantidad">
+    <button onclick="addToInventory()">Agregar al inventario</button>
+  </div>
+
+  <div class="inventory-list">
+    <h2>Inventario</h2>
+    <ul id="inventory"></ul>
+  </div>
+
+  <script>
+    let inventory = [];
+
+    function addToInventory() {
+      const barcode = document.getElementById('barcode').value;
+      const name = document.getElementById('productName').value;
+      const quantity = document.getElementById('quantity').value;
+
+      if (barcode && name && quantity) {
+        inventory.push({ barcode, name, quantity });
+        updateInventoryList();
+        document.getElementById('barcode').value = '';
+        document.getElementById('productName').value = '';
+        document.getElementById('quantity').value = '';
+      }
+    }
+
+    function updateInventoryList() {
+      const list = document.getElementById('inventory');
+      list.innerHTML = '';
+      inventory.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.name} - Código: ${item.barcode} - Cantidad: ${item.quantity}`;
+        list.appendChild(li);
+      });
+    }
+
+    function startScanner() {
+      alert("Aquí se integrará el escáner de código de barra.");
+    }
+  </script>
+</body>
+</html>
+
