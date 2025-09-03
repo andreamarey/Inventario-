@@ -135,64 +135,10 @@
   cursor:pointer;
 }
 .btn-del-mov:hover{ background:#dc2626; }
-
-/* Dashboard */
-.dashboard {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 16px auto;
-  max-width: 1100px;
-}
-.dash-card {
-  flex: 1;
-  min-width: 200px;
-  text-align: center;
-  padding: 16px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-}
-.dash-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-.dash-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--primary);
-}
-.dash-label {
-  font-size: 14px;
-  color: var(--muted);
-}
 </style>
 </head>
 <body>
 <header>Inventario — KLL + SKU</header>
-<!-- Dashboard -->
-<div id="dashboard" class="dashboard">
-  <div class="card dash-card">
-    <div class="dash-icon">📦</div>
-    <div class="dash-value" id="dashProducts">0</div>
-    <div class="dash-label">Productos distintos</div>
-  </div>
-  <div class="card dash-card">
-    <div class="dash-icon">🪑</div>
-    <div class="dash-value" id="dashPieces">0</div>
-    <div class="dash-label">Piezas en inventario</div>
-  </div>
-  <div class="card dash-card">
-    <div class="dash-icon">📅</div>
-    <div class="dash-value" id="dashMoves">0</div>
-    <div class="dash-label">Movimientos este mes</div>
-  </div>
-  <div class="card dash-card">
-    <div class="dash-icon">📊</div>
-    <div class="dash-value" id="dashCut">–</div>
-    <div class="dash-label">Último corte guardado</div>
-  </div>
-</div>
 <div class="container">
 
   <!-- Tabs -->
@@ -408,35 +354,7 @@ let selectedLabelCode = null; // Etiquetas (buscador)
   // Pinta tablas iniciales
   renderInventory();
   refreshLabelSelect(); // buscador de etiquetas
-  updateDashboard();
 })();
-function updateDashboard(){
-  // 1) Productos distintos
-  document.getElementById('dashProducts').textContent = items.length;
-
-  // 2) Piezas totales
-  const totalPzas = items.reduce((acc,i)=>acc+(parseInt(i.cantidad)||0),0);
-  document.getElementById('dashPieces').textContent = totalPzas;
-
-  // 3) Movimientos del mes actual
-  const monthVal = getCurrentMonthValue(); // ya tienes esta función
-  const {start, end} = getMonthRange(monthVal);
-  const movesMonth = moves.filter(m=>{
-    const d = new Date(m.dateISO||Date.now());
-    return d >= start && d <= end;
-  });
-  document.getElementById('dashMoves').textContent = movesMonth.length;
-
-  // 4) Último corte mensual guardado
-  if(snapshots.length>0){
-    const last = [...snapshots].sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""))[0];
-    const lbl = last.label || "Sin nombre";
-    const fecha = new Date(last.createdISO).toLocaleDateString();
-    document.getElementById('dashCut').textContent = `${lbl} (${fecha})`;
-  }else{
-    document.getElementById('dashCut').textContent = "–";
-  }
-}
 function saveAll(){
   localStorage.setItem('items_simple', JSON.stringify(items));
   localStorage.setItem('moves_simple', JSON.stringify(moves));
@@ -498,7 +416,6 @@ document.getElementById('btnGenerate').addEventListener('click', ()=>{
   document.getElementById('newSKU').value = "";
   renderInventory();
   refreshLabelSelect();
-  updateDashboard();
 });
 
 /* ===== Inventario: filtros + export ===== */
