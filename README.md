@@ -10,9 +10,15 @@
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
-    --primary:#2563eb; --primary-600:#1d4ed8;
-    --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280;
-    --ring:rgba(37,99,235,.15)
+  --primary: #468B83;       /* Verde azulado elegante */
+  --primary-600: #3A746E;   /* Versión más oscura para hover */
+  --secondary: #46718B;     /* Azul medio */
+  --accent: #464E8B;        /* Azul profundo */
+  --bg: #F4F5F7;            /* Fondo claro */
+  --card: #fff;             /* Tarjetas blancas */
+  --text: #2E2E2E;          /* Texto principal */
+  --muted: #6B7280;         /* Texto secundario */
+  --ring: rgba(70,139,131,.25); /* Resaltado inputs */
   }
   *{box-sizing:border-box}
   body { font-family: Arial, sans-serif; margin:0; background:var(--bg); color:var(--text); }
