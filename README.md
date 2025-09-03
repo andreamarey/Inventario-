@@ -1,4 +1,4 @@
-# Inventario-
+.# Inventario-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -25,7 +25,7 @@
   header { background:var(--primary); color:#fff; padding:16px; text-align:center; font-weight:700; }
   .container { max-width:1100px; margin:20px auto; padding:10px; }
   .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-  .tab-btn { flex:1; min-width:150px; padding:10px; cursor:pointer; border:1px solid #e5e7eb; background:#fff; border-radius:8px; font-weight:700; }
+  .tab-btn { flex:1; min-width:150px; padding:10px; cursor:pointer; border:1px solid #e5e7eb; background:#000; border-radius:8px; font-weight:700; }
   .tab-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
   .card { background:#fff; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
   .hidden { display:none; }
