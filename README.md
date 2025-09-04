@@ -8,6 +8,7 @@
 <!-- Librerías -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
   --primary: #468B83;       /* Verde azulado elegante */
@@ -21,7 +22,7 @@
   --ring: rgba(70,139,131,.25); /* Resaltado inputs */
   }
   *{box-sizing:border-box}
-  body { font-family: Arial, sans-serif; margin:0; background:var(--bg); color:var(--text); }
+  body {font-family: 'Inter', sans-serif;margin: 0;background: var(--bg);color: var(--text);}
   header { background:var(--primary); color:#fff; padding:16px; text-align:center; font-weight:700; }
   .container { max-width:1100px; margin:20px auto; padding:10px; }
   .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
@@ -141,6 +142,14 @@
   cursor:pointer;
 }
 .btn-del-mov:hover{ background:#dc2626; }
+
+h1, h2, h3 {
+  font-weight: 700; /* títulos más fuertes */
+}
+
+button {
+  font-weight: 600; /* botones con texto un poco más grueso */
+}
 </style>
 </head>
 <body>
