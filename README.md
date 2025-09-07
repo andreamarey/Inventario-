@@ -1,170 +1,385 @@
-.# Inventario-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inventario — KLL + SKU</title>
+<title>Inventario — EMBARQUES</title>
 <!-- Librerías -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-  :root{
-  --primary: #468B83;       /* Verde azulado elegante */
-  --primary-600: #3A746E;   /* Versión más oscura para hover */
-  --secondary: #46718B;     /* Azul medio */
-  --accent: #464E8B;        /* Azul profundo */
-  --bg: #F4F5F7;            /* Fondo claro */
-  --card: #fff;             /* Tarjetas blancas */
-  --text: #2E2E2E;          /* Texto principal */
-  --muted: #6B7280;         /* Texto secundario */
-  --ring: rgba(70,139,131,.25); /* Resaltado inputs */
-  }
-  *{box-sizing:border-box}
-  body {font-family: 'Inter', sans-serif;margin: 0;background: var(--bg);color: var(--text);}
-  header { background:var(--primary); color:#fff; padding:16px; text-align:center; font-weight:700; }
-  .container { max-width:1100px; margin:20px auto; padding:10px; }
-  .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-  .tab-btn { flex:1; min-width:150px; padding:10px; cursor:pointer; border:1px solid #e5e7eb; background:#fff; border-radius:8px; font-weight:700; color: #000;  /* ← siempre texto negro */}
-    .tab-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
-  .card { background:#fff; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-  .hidden { display:none; }
-  input,button,select { width:100%; padding:10px; margin:6px 0; border-radius:8px; border:1px solid #e5e7eb; background:#fff; color:var(--text); }
-  input:focus,select:focus { outline:none; box-shadow:0 0 0 3px var(--ring); border-color:var(--primary); }
-  button { background:var(--primary); color:#fff; border:none; cursor:pointer; font-weight:700; }
-  button:hover { background:var(--primary-600); }
-  .btn-secondary{ background:#6b7280; }
-  .btn-secondary:hover{ background:#4b5563; }
-  .btn-danger{ background:#ef4444; }
-  .btn-danger:hover{ background:#dc2626; }
-  .row{display:flex; gap:10px; flex-wrap:wrap}
-  .muted { color:var(--muted); font-size:.9rem; }
-  ul{padding-left:18px; margin:6px 0}
+/* Tipografía (fallback si no agregas el <link> en <head>) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-  /* Etiqueta preview (pantalla) */
-  .label-preview { border:1px solid #000; padding:12px; width:320px; background:#fff; border-radius:6px; }
-  .model { font-size:20px; font-weight:700; }
-  .fabric, .sku, .date { font-size:14px; margin-top:2px; }
+/* =====================  Variables de diseño  ===================== */
+:root{
+  /* Paleta base (del usuario) */
+  --teal-600:#468B83;   /* principal */
+  --blue-600:#46718B;   /* acento 1 */
+  --indigo-600:#464E8B; /* acento 2 */
 
-  /* Historial / Conteo */
-  .group{margin:10px 0}
-  .group h3{margin:0 0 6px 0; font-size:1rem}
-  .mov{padding:6px 8px; border:1px solid #e5e7eb; border-radius:8px; margin:4px 0; background:#fff}
-  .kv{font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.9rem}
-  table th, table td { font-size:14px; }
+  /* Derivados y neutros */
+  --primary: var(--teal-600);
+  --primary-700: #3b756f;
+  --primary-50:  #ecf7f5;
 
-  /* ===== Indicador de escaneo (flash) ===== */
-  #scanFlash{
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 9999;
-    padding: 12px 14px;
-    border-radius: 10px;
-    font-weight: 700;
-    color: #fff;
-    display: none;
-    opacity: 0;
-    transition: opacity .25s ease;
-    box-shadow: 0 8px 20px rgba(0,0,0,.15);
-  }
-  #scanFlash.ok { background: #10b981; }  /* verde */
-  #scanFlash.err{ background: #ef4444; }  /* rojo  */
-  
-  /* Inventario como tabla */
-.inv-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  font-size: 14px;
-  background: #fff;
-}
-.inv-table th, .inv-table td {
-  border: 1px solid #e5e7eb;
-  padding: 8px;
-  text-align: left;
-}
-.inv-table th {
-  background: #f9fafb;
-  font-weight: 700;
-}
-.inv-table tbody tr:nth-child(even) {
-  background: #f3f4f6;
-}
-.inv-table td:last-child {
-  text-align: center;
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --shadow:0 6px 20px rgba(0,0,0,.06);
+  --ring: rgba(70,139,131,.25);
+
+  /* NUEVO: Colores de estado */
+  --success:#10b981;
+  --success-50:#ecfdf5;
+  --warning:#f59e0b;
+  --warning-50:#fffbeb;
+  --danger:#ef4444;
+  --danger-600:#dc2626;
+  --danger-50:#fef2f2;
+
+  /* Hover fila tabla */
+  --row-hover:#f1f5f9;
 }
 
-/* Botón eliminar */
-.btn-del {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
+/* =====================  Reset básico  ===================== */
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 400;
+  letter-spacing:.2px;
 }
-.btn-del:hover { background: #dc2626; }
 
-/* Movimientos como tabla */
-.mov-table{
+/* =====================  Header  ===================== */
+header{
+  background: linear-gradient(135deg,var(--teal-600), var(--blue-600));
+  color:#fff;
+  padding:28px 20px;
+  text-align:center;
+  font-weight:700;
+  letter-spacing:.5px;
+  box-shadow: var(--shadow);
+  border-bottom:4px solid var(--indigo-600);
+  position: relative;
+}
+
+header h1{
+  margin:0;
+  font-size:2rem;
+  font-family:"Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  text-transform: uppercase;
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+  letter-spacing:1px;
+}
+
+header span.sub{
+  display:block;
+  margin-top:6px;
+  font-size:0.9rem;
+  font-weight:400;
+  letter-spacing:.5px;
+  color: rgba(255,255,255,.85);
+}
+
+/* =====================  Contenedor  ===================== */
+.container{
+  max-width:1200px;
+  margin:28px auto;
+  padding: 0 20px;
+}
+
+/* =====================  Tabs (inactivas texto negro / activa blanca)  ===================== */
+.tabs{
+  display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;
+}
+.tab-btn{
+  flex:1; min-width:160px;
+  padding:12px 14px;
+  background:#f3f4f6;       /* inactiva */
+  color:#111;               /* texto negro en inactiva */
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+  transition: all .18s ease;
+}
+.tab-btn:hover{
+  background:#fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+.tab-btn.active{
+  background:#fff;          /* activa blanca */
+  color: var(--primary-700);/* texto con matiz del primario */
+  border-color: var(--primary);
+  box-shadow: 0 6px 16px rgba(70,139,131,.15);
+}
+
+/* =====================  Tarjetas / secciones  ===================== */
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius:14px;
+  padding: 24px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* =====================  Tipografía / espaciados  ===================== */
+h2{
+  margin:0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight:700;
+  letter-spacing:.2px;
+}
+h3{
+  margin:18px 0 10px 0;
+  font-size: 1rem;
+  font-weight:600;
+}
+.muted{ color: var(--muted); font-size:.92rem; }
+
+/* =====================  Layout de formularios  ===================== */
+.row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom: 12px; }
+
+input,select,button{
   width:100%;
-  border-collapse:collapse;
+  padding:12px 14px;
+  margin:6px 0;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  font-size:15px;
+}
+input:focus,select:focus{
+  outline:none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* =====================  Botones  ===================== */
+button{
+  background: var(--primary);
+  color:#fff;
+  border:none;
+  font-weight:700;
+  cursor:pointer;
+  border-radius:10px;
+  padding:12px 14px;
+  transition:
+    transform .06s ease,
+    box-shadow .2s ease,
+    background .2s ease,
+    filter .2s ease;
+}
+button:hover{
+  filter: brightness(0.97);
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
+}
+button:active{ transform: translateY(1px); }
+button:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* Variantes */
+.btn-secondary{ background: var(--blue-600); }
+.btn-secondary:hover{ filter: brightness(0.98); }
+
+.btn-danger{ background: var(--danger); }
+.btn-danger:hover{ background: var(--danger-600); }
+
+/* Botones de borrar (mantengo tus clases) */
+.btn-del, .btn-del-mov{
+  background: var(--danger);
+  color:#fff; border:none;
+  padding:8px 12px;
+  border-radius:10px;
+  font-size:12.5px;
+  font-weight:700;
+}
+.btn-del:hover, .btn-del-mov:hover{ background: var(--danger-600); }
+
+/* Iconos dentro de botones */
+button i { margin-right: 6px; }
+
+/* =====================  Tablas  ===================== */
+.inv-table, .mov-table{
+  width:100%;
+  border-collapse: collapse;
   margin-top:10px;
   font-size:14px;
   background:#fff;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow: var(--shadow);
 }
+.inv-table th, .inv-table td,
 .mov-table th, .mov-table td{
-  border:1px solid #e5e7eb;
-  padding:8px;
+  border-bottom:1px solid var(--border);
+  padding:10px 12px;
   text-align:left;
 }
-.mov-table th{
-  background:#f9fafb;
+.inv-table th, .mov-table th{
+  background: var(--primary-50);
+  color:#0f172a;
   font-weight:700;
 }
+.inv-table th, .mov-table th{
+  position: sticky; /* opcional, requiere contenedor con overflow */
+  top: 0;
+  z-index: 1;
+}
+.inv-table tbody tr:nth-child(even),
 .mov-table tbody tr:nth-child(even){
-  background:#f3f4f6;
+  background:#fafafa;
 }
+.inv-table td:last-child, .mov-table td:last-child{ text-align:center; }
 .mov-table td:nth-last-child(3){ text-align:right; } /* columna Δ */
-.mov-table td:last-child{ text-align:center; }
-
-/* Botón eliminar movimiento (reutiliza .btn-del) */
-.btn-del-mov{ /* opcional si quieres un tono distinto */
-  background:#ef4444;
-  color:#fff;
-  border:none;
-  padding:6px 10px;
-  border-radius:8px;
+/* =====================  Chips para "Tipo" en historial  ===================== */
+.chip{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
   font-size:12px;
-  cursor:pointer;
-}
-.btn-del-mov:hover{ background:#dc2626; }
-
-h1, h2, h3 {
-  font-weight: 700; /* títulos más fuertes */
+  line-height:1.6;
+  font-weight:700;
+  border:1px solid transparent;
 }
 
-button {
-  font-weight: 600; /* botones con texto un poco más grueso */
+.chip-register{
+  background: var(--success-50);
+  color: var(--success);
+  border-color: rgba(16,185,129,.25);
+}
+.chip-import{
+  background: var(--warning-50);
+  color: var(--warning);
+  border-color: rgba(245,158,11,.25);
+}
+.chip-scan{
+  background: var(--primary-50);
+  color: var(--primary-700);
+  border-color: rgba(70,139,131,.25);
+}
+
+/* Hover de filas en tablas (más feedback visual) */
+.inv-table tbody tr:hover,
+.mov-table tbody tr:hover{
+  background: var(--row-hover);
+}
+
+/* =====================  Etiqueta / vista previa (SIN LOGO) ===================== */
+.label-preview{
+  border:1.5px solid #111;
+  padding:16px 16px 12px;
+  width:380px;                /* ancho de preview en pantalla */
+  background:#fff;
+  border-radius:10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+  font-family: Arial, sans-serif;
+  margin: 0 auto;             /* centrada en el contenedor */
+}
+
+.label-title{
+  font-size:18px;
+  font-weight:800;
+  text-align:center;
+  letter-spacing:.5px;
+  margin:0 0 6px;
+}
+.label-sub{
+  font-size:14px;
+  font-weight:600;
+  margin:0 0 8px;
+  text-align:center;
+}
+.label-divider{
+  height:2px;
+  background:#111;
+  margin:6px 0 10px;
+  border-radius:2px;
+}
+
+.label-row{
+  display:flex;
+  gap:8px;
+  font-size:14px;
+  margin:6px 0;
+  align-items:flex-end;
+}
+.label-row .k{
+  width:88px;
+  font-weight:800;
+}
+.label-row .v{
+  flex:1;
+  min-height:18px;            /* deja “hueco” visible si está vacío */
+  border-bottom:1px dotted #999;
+  padding-bottom:2px;
+  word-break: break-word;
+}
+
+.barcode-wrap{
+  margin-top:12px;
+  text-align:center;
+}
+.code-text{
+  font-size:12px;
+  margin-top:6px;
+  letter-spacing:1px;
+}
+.label-title{
+  font-size:18px;
+  font-weight:800;
+}
+/* =====================  Tarjetas de historial  ===================== */
+.group{ margin:12px 0 }
+.group h3{ margin:0 0 8px 0; font-size:1rem }
+.mov{ padding:8px 10px; border:1px solid var(--border); border-radius:12px; margin:6px 0; background:#fff }
+.kv{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.92rem }
+
+/* =====================  Flash de escaneo  ===================== */
+#scanFlash{
+  position: fixed; top:16px; right:16px; z-index:9999;
+  padding:12px 14px; border-radius:12px; font-weight:700; color:#fff;
+  display:none; opacity:0; transition:opacity .25s ease;
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+}
+#scanFlash.ok{ background:#10b981; }
+#scanFlash.err{ background:#ef4444; }
+/* Visibilidad para tabs */
+.hidden { display: none !important; }
+button i {
+  margin-right: 6px;
 }
 </style>
 </head>
 <body>
-<header>Inventario — KLL + SKU</header>
+<header>
+  <h1>Inventario — Embarques</h1>
+  <span class="sub">Control y seguimiento de muebles</span>
+</header>
 <div class="container">
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="registrar">Registrar</button>
-    <button class="tab-btn" data-tab="escanear">Escanear</button>
-    <button class="tab-btn" data-tab="inventario">Inventario</button>
-    <button class="tab-btn" data-tab="conteo">Conteo mensual</button>
-    <button class="tab-btn" data-tab="etiquetas">Etiquetas</button>
-    <button class="tab-btn" data-tab="config">Configuración y Herramientas</button>
-  </div>
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="registrar">Registrar</button>
+  <button class="tab-btn" data-tab="escanear">Escanear</button>
+  <button class="tab-btn" data-tab="inventario">Inventario</button>
+  <button class="tab-btn" data-tab="conteo">Conteo mensual</button>
+  <button class="tab-btn" data-tab="etiquetas">Etiquetas</button>
+  <button class="tab-btn" data-tab="config">Configuración y Herramientas</button>
+</div>
 
   <!-- Registrar -->
   <section id="registrar" class="card">
@@ -172,10 +387,13 @@ button {
     <div class="row">
       <input id="newName" placeholder="Modelo (ej. Sillón Roma)">
       <input id="newFabric" placeholder="Tela (ej. Lino Beige)">
-      <input id="newSKU" placeholder="SKU (ej. SR-LB)">
+      <input id="newSKU" placeholder="SKU (opcional, ej. SR-LB)">
     </div>
-    <button id="btnGenerate">Guardar / Sumar</button>
-    <div class="muted">Si ya existe el mismo <b>SKU + Modelo + Tela</b>, se suma cantidad y se reutiliza el mismo KLL.</div>
+<button id="btnGenerate"><i class="fa fa-plus"></i> Guardar / Sumar</button>
+<div class="muted">
+  Si el <b>SKU</b> está vacío, se busca por <b>Modelo + Tela</b> (sin mezclar con los que sí tienen SKU).
+  Si el <b>SKU</b> tiene valor, se usa <b>SKU + Modelo + Tela</b>.
+</div>
   </section>
 
   <!-- Escanear -->
@@ -183,8 +401,8 @@ button {
     <h2>Escanear (QR + Code128)</h2>
     <div class="row">
       <select id="cameraSelect" title="Selecciona cámara"></select>
-      <button id="btnStart" class="btn-secondary">Iniciar cámara</button>
-      <button id="btnStop" class="btn-secondary">Detener cámara</button>
+<button id="btnStart" class="btn-secondary"><i class="fa fa-camera"></i> Iniciar cámara</button>
+<button id="btnStop" class="btn-secondary"><i class="fa fa-stop"></i> Detener cámara</button>
     </div>
     <div id="reader" style="width:100%; max-width:420px; margin:8px auto;"></div>
     <div class="row">
@@ -195,9 +413,9 @@ button {
       <input id="scanQty" placeholder="Cantidad total" readonly>
     </div>
     <div class="row">
-      <button id="btnPlus1" class="btn-secondary">+1</button>
+    <button id="btnPlus1" class="btn-secondary"><i class="fa fa-plus"></i> +1</button>
       <input id="plusN" type="number" min="1" value="5" style="max-width:140px">
-      <button id="btnPlusN" class="btn-secondary">+N</button>
+<button id="btnPlusN" class="btn-secondary"><i class="fa fa-layer-group"></i> +N</button>
     </div>
     <div class="muted">Tras detectar, se pausa 1.2s para evitar dobles lecturas.</div>
   </section>
@@ -216,9 +434,13 @@ button {
     </div>
 
     <div class="row" style="margin-top:6px">
-      <button onclick="exportFilteredTotals()">Exportar CSV (Totales Filtrados)</button>
-      <button onclick="exportFilteredHistory()" class="btn-secondary">Exportar CSV (Historial Filtrado)</button>
-    </div>
+  <button onclick="exportFilteredTotals()">
+    <i class="fa fa-file-export"></i> Exportar CSV (Totales Filtrados)
+  </button>
+  <button onclick="exportFilteredHistory()" class="btn-secondary">
+    <i class="fa fa-file-export"></i> Exportar CSV (Historial Filtrado)
+  </button>
+</div>
 
   <h3 style="margin-top:14px">Totales (filtrados)</h3>
 
@@ -283,20 +505,28 @@ button {
     <div id="snapshotsList" class="muted">No hay cortes guardados.</div>
   </section>
 
-  <!-- Etiquetas (BUSCADOR + SUGERENCIAS) -->
-  <section id="etiquetas" class="card hidden">
-    <h2>Etiquetas</h2>
-    <div class="row">
-      <input id="labelSearch" placeholder="Buscar por modelo, tela, SKU o código" oninput="renderLabelSuggestions()">
-      <button id="btnPrint">Imprimir etiqueta</button>
-    </div>
-    <div id="labelSuggestions" class="muted" style="margin-top:6px">Escribe para ver sugerencias…</div>
-    <div id="previewWrap" style="margin-top:12px"></div>
-    <div class="muted" style="margin-top:6px">
-      Formato: Modelo (grande) · Tela · <b>SKU</b> · Fecha · Código de barras (KLL)
-    </div>
-  </section>
+<!-- Etiquetas (BUSCADOR + SUGERENCIAS) -->
+<section id="etiquetas" class="card hidden">
+  <h2>Etiquetas</h2>
 
+  <!-- fila de búsqueda + imprimir -->
+  <div class="row">
+    <input id="labelSearch" placeholder="Buscar por modelo, tela, SKU o código" oninput="renderLabelSuggestions()">
+    <button id="btnPrint">Imprimir etiqueta</button>
+  </div>
+
+  <!-- NUEVO: campos editables -->
+  <div class="row">
+    <input id="labelCliente" placeholder="CLIENTE (opcional)">
+    <input id="labelDestino" placeholder="DESTINO (opcional)">
+  </div>
+
+  <div id="labelSuggestions" class="muted" style="margin-top:6px">Escribe para ver sugerencias…</div>
+  <div id="previewWrap" style="margin-top:12px"></div>
+  <div class="muted" style="margin-top:6px">
+    Formato: Encabezado fijo · Cliente (editable) · Línea · Modelo · Tela · SKU · Destino (editable) · Fecha (impresión) · Código de barras con descripción.
+  </div>
+</section>
   <!-- Configuración y Herramientas -->
   <section id="config" class="card hidden">
     <h2>Configuración y Herramientas</h2>
@@ -339,37 +569,93 @@ button {
 <script>
 /* ===== Estado & Persistencia ===== */
 let items = [];     // [{code, sku, nombre, tela, cantidad, createdISO}]
-let moves = [];     // [{dateISO, code, sku, nombre, tela, delta, type}] // type: 'register'|'import'|'scan'
+let moves = [];     // [{dateISO, code, sku, nombre, tela, delta, type}]
 let kllCounter = 1;
 let prefs = { beep:true, vibrate:true };
-let snapshots = []; // [{id,label,createdISO,totals:[{code,sku,nombre,tela,cantidad}],notes?}]
-let countBuffer = []; // buffer de conteo
-let selectedLabelCode = null; // Etiquetas (buscador)
+let snapshots = []; // [{id,label,createdISO,totals:[...]}]
+let countBuffer = [];
+let selectedLabelCode = null;
 
 /* ===== Cargar ===== */
 (function load(){
   try{
-    items = JSON.parse(localStorage.getItem('items_simple')||'[]');
-    moves = JSON.parse(localStorage.getItem('moves_simple')||'[]');
-    kllCounter = parseInt(localStorage.getItem('kllCounter_simple')||'1');
-    const p = JSON.parse(localStorage.getItem('prefs_simple')||'{}');
-    prefs.beep = p.beep!==undefined ? p.beep : true;
-    prefs.vibrate = p.vibrate!==undefined ? p.vibrate : true;
-    snapshots = JSON.parse(localStorage.getItem('snapshots_simple')||'[]');
+    items      = JSON.parse(localStorage.getItem('items_simple')||'[]');
+    moves      = JSON.parse(localStorage.getItem('moves_simple')||'[]');
+    kllCounter = parseInt(localStorage.getItem('kllCounter_simple')||'1',10);
+    const p    = JSON.parse(localStorage.getItem('prefs_simple')||'{}');
+    prefs.beep     = p.beep!==undefined ? p.beep : true;
+    prefs.vibrate  = p.vibrate!==undefined ? p.vibrate : true;
+    snapshots  = JSON.parse(localStorage.getItem('snapshots_simple')||'[]');
   }catch(e){
-    items=[]; moves=[]; kllCounter=1; prefs={beep:true, vibrate:true}; snapshots=[];
+    items=[]; moves=[]; kllCounter=1; prefs={beep:true,vibrate:true}; snapshots=[];
   }
 
-  document.getElementById('prefBeep').checked = !!prefs.beep;
-  document.getElementById('prefVibrate').checked = !!prefs.vibrate;
+  const chkBeep = document.getElementById('prefBeep');
+  const chkVib  = document.getElementById('prefVibrate');
+  if (chkBeep) chkBeep.checked = !!prefs.beep;
+  if (chkVib)  chkVib.checked  = !!prefs.vibrate;
 
-  // Asegura IDs en movimientos ya existentes
-  ensureMoveIds();
+  // Asegura IDs de movimientos ya guardados (definición de ensureMoveIds más abajo en tu archivo)
+  try { if (typeof ensureMoveIds === 'function') ensureMoveIds(); } catch(_){}
 
-  // Pinta tablas iniciales
-  renderInventory();
-  refreshLabelSelect(); // buscador de etiquetas
+  // Pinta vistas iniciales
+  try { renderInventory(); } catch(_){}
+  try { refreshLabelSelect(); } catch(_){}
 })();
+
+/* ===== Exportaciones desde Config (botones "Totales" y "Movimientos") ===== */
+(function bindConfigExports(){
+  const btnTot = document.getElementById('btnExportTotals');
+  const btnMov = document.getElementById('btnExportMovs');
+  if (btnTot) btnTot.addEventListener('click', exportAllTotals);
+  if (btnMov) btnMov.addEventListener('click', exportAllMoves);
+})();
+
+/* ===== Exportar TODO (sin filtros) ===== */
+function exportAllTotals(){
+  if (!Array.isArray(items) || items.length===0){
+    alert("No hay datos en Totales para exportar.");
+    return;
+  }
+  const headers = ["Modelo","Tela","SKU","Código","Cantidad","Fecha Alta"];
+  const rows = [...items]
+    .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""))
+    .map(i=>[
+      i.nombre,
+      i.tela,
+      i.sku || "",
+      i.code,
+      Number(i.cantidad)||0,
+      i.createdISO ? new Date(i.createdISO).toLocaleDateString() : ""
+    ]);
+  // downloadCSV está definido más abajo en tu archivo
+  downloadCSV("inventario_totales_COMPLETO.csv", headers, rows);
+}
+
+function exportAllMoves(){
+  if (!Array.isArray(moves) || moves.length===0){
+    alert("No hay movimientos para exportar.");
+    return;
+  }
+  const headers = ["Fecha","Hora","Código","SKU","Modelo","Tela","Delta","Tipo"];
+  const rows = [...moves]
+    .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""))
+    .map(m=>{
+      const d = m.dateISO ? new Date(m.dateISO) : new Date();
+      return [
+        d.toLocaleDateString(),
+        d.toLocaleTimeString(),
+        m.code,
+        m.sku || "",
+        m.nombre,
+        m.tela,
+        Number(m.delta)||0,
+        m.type
+      ];
+    });
+  downloadCSV("inventario_movimientos_COMPLETO.csv", headers, rows);
+}
+
 function saveAll(){
   localStorage.setItem('items_simple', JSON.stringify(items));
   localStorage.setItem('moves_simple', JSON.stringify(moves));
@@ -378,53 +664,110 @@ function saveAll(){
   localStorage.setItem('snapshots_simple', JSON.stringify(snapshots));
 }
 
-/* ===== Cambio de pestañas (protegido) ===== */
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));
-    const sec = document.getElementById(btn.dataset.tab);
-    if (sec) sec.classList.remove('hidden');
+/* ===== Tabs (única implementación) ===== */
+window.showTab = function(id){
+  // Ocultar todas las secciones
+  document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+  // Mostrar sección seleccionada
+  const sec = document.getElementById(id);
+  if (sec) sec.classList.remove('hidden');
 
-    if (btn.dataset.tab==='etiquetas') {
-      if (typeof refreshLabelSelect === 'function') refreshLabelSelect();
-    }
-    if (btn.dataset.tab==='escanear'){
-      if (typeof initCameras === 'function') initCameras();
-    } else {
-      if (typeof stopScanner === 'function') stopScanner();
-    }
-    if (btn.dataset.tab==='conteo'){
-      if (typeof renderCountEditor==='function') renderCountEditor();
-      if (typeof renderSnapshotsList==='function') renderSnapshotsList();
-    }
-  });
-});
+  // Marcar pestaña activa
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+  if (btn) btn.classList.add('active');
 
+  // Hooks seguros por pestaña
+  if (id === 'escanear'){
+    try { if (typeof initCameras === 'function') initCameras(); } catch(_){}
+  } else {
+    try { if (typeof stopScanner === 'function') stopScanner(); } catch(_){}
+  }
+  if (id === 'etiquetas'){
+    try { if (typeof refreshLabelSelect === 'function') refreshLabelSelect(); } catch(_){}
+  }
+  if (id === 'conteo'){
+    try { if (typeof renderCountEditor === 'function') renderCountEditor(); } catch(_){}
+    try { if (typeof renderSnapshotsList === 'function') renderSnapshotsList(); } catch(_){}
+  }
+};
+
+// Inicializa pestaña y listener global (delegación)
+(function initTabs(){
+  // Mostrar la pestaña marcada como activa, o 'registrar' por defecto
+  const initial = document.querySelector('.tab-btn.active')?.dataset.tab || 'registrar';
+  showTab(initial);
+
+  // Un solo listener para todos los .tab-btn
+  document.addEventListener('click', function(ev){
+    const btn = ev.target.closest('.tab-btn');
+    if (!btn) return;
+    const id = btn.getAttribute('data-tab');
+    if (!id) return;
+    ev.preventDefault();
+    showTab(id);
+  }, true);
+
+  // (Opcional) Exponer función para cambiar pestañas desde HTML/JS
+  window.switchTab = showTab;
+})();
 /* ===== Registrar ===== */
 document.getElementById('btnGenerate').addEventListener('click', ()=>{
   const nombre = document.getElementById('newName').value.trim();
   const tela   = document.getElementById('newFabric').value.trim();
-  const sku    = document.getElementById('newSKU').value.trim();
-  if(!nombre || !tela || !sku){ alert("Completa Modelo, Tela y SKU"); return; }
+  const sku    = document.getElementById('newSKU').value.trim(); // ahora opcional
 
-  const existing = items.find(i=>i.sku.toLowerCase()===sku.toLowerCase() &&
-                                 i.nombre.toLowerCase()===nombre.toLowerCase() &&
-                                 i.tela.toLowerCase()===tela.toLowerCase());
+  // SKU ya no es obligatorio
+  if(!nombre || !tela){
+    alert("Completa Modelo y Tela");
+    return;
+  }
+
+  // Helper seguro para comparar en minúsculas
+  const lc = s => (s||'').trim().toLowerCase();
+  const hasSku = sku.trim().length > 0;
+
+  // Regla de coincidencia:
+  // - Si hay SKU: match por (nombre + tela + sku)
+  // - Si NO hay SKU: match por (nombre + tela) y además que ese item NO tenga SKU
+  let existing = null;
+  if (hasSku){
+    existing = items.find(i =>
+      lc(i.nombre) === lc(nombre) &&
+      lc(i.tela)   === lc(tela)   &&
+      lc(i.sku)    === lc(sku)
+    );
+  } else {
+    existing = items.find(i =>
+      lc(i.nombre) === lc(nombre) &&
+      lc(i.tela)   === lc(tela)   &&
+      lc(i.sku)    === ''         // no mezclar con los que sí tienen SKU
+    );
+  }
+
   const nowISO = new Date().toISOString();
 
   if(existing){
     existing.cantidad += 1;
-    moves.push({id: genId(),dateISO: nowISO, code: existing.code, sku: existing.sku, nombre: existing.nombre, tela: existing.tela, delta:+1, type:'register'});
-    alert(`Se sumó +1 a ${existing.nombre} (${existing.tela}) · SKU ${existing.sku}\nCódigo: ${existing.code}`);
+    moves.push({
+      id: genId(),
+      dateISO: nowISO,
+      code: existing.code,
+      sku: existing.sku,           // puede venir vacío
+      nombre: existing.nombre,
+      tela: existing.tela,
+      delta: +1,
+      type: 'register'
+    });
+    alert(`Se sumó +1 a ${existing.nombre} (${existing.tela}) · SKU ${existing.sku||'(sin SKU)'}\nCódigo: ${existing.code}`);
   }else{
     const code = "KLL-" + String(kllCounter).padStart(4,"0");
     kllCounter++;
-    items.push({code, sku, nombre, tela, cantidad:1, createdISO:nowISO});
-    moves.push({id: genId(),dateISO: nowISO, code, sku, nombre, tela, delta:+1, type:'register'});
+    items.push({ code, sku, nombre, tela, cantidad:1, createdISO:nowISO });
+    moves.push({ id: genId(), dateISO: nowISO, code, sku, nombre, tela, delta:+1, type:'register' });
     alert(`Nuevo producto creado con código ${code}`);
   }
+
   saveAll();
   document.getElementById('newName').value = "";
   document.getElementById('newFabric').value = "";
@@ -477,17 +820,21 @@ function renderInventory(){
 
   data.forEach(i=>{
     const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(i.nombre)}</td>
-      <td>${escapeHtml(i.tela)}</td>
-      <td>${escapeHtml(i.sku||'')}</td>
-      <td>${escapeHtml(i.code)}</td>
-      <td style="text-align:right">${i.cantidad}</td>
-      <td>${escapeHtml(dateTxt)}</td>
-      <td><button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')">Eliminar</button></td>
-    `;
-    tbody.appendChild(tr);
+  const tr = document.createElement('tr');
+tr.innerHTML = `
+  <td>${escapeHtml(i.nombre)}</td>
+  <td>${escapeHtml(i.tela)}</td>
+  <td>${escapeHtml(i.sku||'')}</td>
+  <td>${escapeHtml(i.code)}</td>
+  <td style="text-align:right">${i.cantidad}</td>
+  <td>${escapeHtml(dateTxt)}</td>
+  <td>
+    <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
+      <i class="fa fa-trash"></i> Eliminar
+    </button>
+  </td>
+`;
+tbody.appendChild(tr);
   });
 
   // Mantén el historial sincronizado con los mismos filtros
@@ -528,21 +875,27 @@ function renderHistory(){
 
   rows.forEach(m=>{
     const d = m.dateISO ? new Date(m.dateISO) : new Date();
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${d.toLocaleDateString()}</td>
-      <td>${d.toLocaleTimeString()}</td>
-      <td>${escapeHtml(m.code)}</td>
-      <td>${escapeHtml(m.sku||'')}</td>
-      <td>${escapeHtml(m.nombre)}</td>
-      <td>${escapeHtml(m.tela)}</td>
-      <td style="text-align:right">${m.delta>0? '+'+m.delta : m.delta}</td>
-      <td>${escapeHtml(m.type)}</td>
-      <td>
-        <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')">Eliminar</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
+const tr = document.createElement('tr');
+tr.innerHTML = `
+  <td>${d.toLocaleDateString()}</td>
+  <td>${d.toLocaleTimeString()}</td>
+  <td>${escapeHtml(m.code)}</td>
+  <td>${escapeHtml(m.sku||'')}</td>
+  <td>${escapeHtml(m.nombre)}</td>
+  <td>${escapeHtml(m.tela)}</td>
+  <td style="text-align:right">${m.delta>0? '+'+m.delta : m.delta}</td>
+<td>
+  <span class="chip chip-${escapeHtml(m.type)}">
+    ${escapeHtml(m.type)}
+  </span>
+</td>
+  <td>
+    <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
+      <i class="fa fa-trash"></i> Eliminar
+    </button>
+  </td>
+`;
+tbody.appendChild(tr);
   });
 }function exportFilteredTotals(){
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
@@ -882,21 +1235,52 @@ document.getElementById('btnStart').addEventListener('click', startScanner);
 document.getElementById('btnStop').addEventListener('click', stopScanner);
 
 async function initCameras(){
-  const select = document.getElementById('cameraSelect');
+  const select  = document.getElementById('cameraSelect');
+  const btnStart = document.getElementById('btnStart');
+  if (!select) return;
+
+  // Limpia estado
   select.innerHTML = "";
+  btnStart?.setAttribute('disabled','');
+
   try{
     const cams = await Html5Qrcode.getCameras();
+
+    if (!cams || cams.length === 0){
+      // Sin cámaras
+      const opt = document.createElement('option');
+      opt.value = ""; opt.textContent = "Sin cámaras detectadas";
+      select.appendChild(opt);
+      currentCamId = null;
+      return;
+    }
+
+    // Poblar lista
     cams.forEach(c=>{
       const opt = document.createElement('option');
       opt.value = c.id; opt.textContent = c.label || c.id;
       select.appendChild(opt);
     });
-    const rear = cams.find(c=>/back|rear|trase|environment/gi.test(c.label||""));
-    currentCamId = (rear ? rear.id : cams[0]?.id);
-    if(currentCamId) select.value = currentCamId;
-    select.onchange = ()=>{ currentCamId = select.value; if(h5){ stopScanner(); startScanner(); } };
+
+    // Elegir trasera si existe
+    const rear = cams.find(c=>/back|rear|trase|environment/i.test(c.label||""));
+    currentCamId = (rear ? rear.id : cams[0].id);
+    select.value = currentCamId;
+
+    // Habilitar botón iniciar
+    btnStart?.removeAttribute('disabled');
+
+    // Cambio de cámara
+    select.onchange = ()=>{
+      currentCamId = select.value || null;
+      if (h5){ stopScanner(); startScanner(); }
+    };
   }catch(e){
-    console.error(e);
+    console.warn(e);
+    const opt = document.createElement('option');
+    opt.value = ""; opt.textContent = "No se pudo acceder a cámaras";
+    select.appendChild(opt);
+    currentCamId = null;
   }
 }
 async function startScanner(){
@@ -938,29 +1322,39 @@ function onScanSuccess(text){
 
 /* ===== Lógica común para cámara + escáner físico ===== */
 function processScan(text){
-  const codeText = String(text || "").trim();
+  const codeTextRaw = String(text || "");
+  const codeText = normalizeScan(codeTextRaw);
   if(!codeText) return;
 
-  // Reflejar el texto detectado en la pestaña Escanear (si está abierta)
+  // Reflejar el texto normalizado en la UI
   const codeInput = document.getElementById('scanCode');
   if(codeInput) codeInput.value = codeText;
 
-  // Buscar por Código KLL exacto o por SKU (insensible a mayúsculas)
-  const item = items.find(i=> i.code === codeText ||
-                              (i.sku||"").toLowerCase() === codeText.toLowerCase());
+  // Buscar por Código KLL o por SKU usando comparación normalizada
+  const item = items.find(i =>
+    normalizeScan(i.code) === codeText ||
+    normalizeScan(i.sku || "") === codeText
+  );
 
   if(item){
     item.cantidad += 1;
     const nowISO = new Date().toISOString();
-    moves.push({id: genId(),dateISO:nowISO, code:item.code, sku:item.sku, nombre:item.nombre, tela:item.tela, delta:+1, type:'scan'});
+    moves.push({
+      id: genId(),
+      dateISO: nowISO,
+      code: item.code,
+      sku: item.sku,
+      nombre: item.nombre,
+      tela: item.tela,
+      delta: +1,
+      type: 'scan'
+    });
 
     if(prefs.beep) beep();
     if(prefs.vibrate && navigator.vibrate) navigator.vibrate(80);
 
-    // Indicador visual de éxito
     flashScan(true, `+1 ${item.nombre} (${item.tela})`);
 
-    // Actualiza campos de la pestaña Escanear (si visible)
     const n = document.getElementById('scanName');
     const f = document.getElementById('scanFabric');
     const s = document.getElementById('scanSKU');
@@ -973,7 +1367,6 @@ function processScan(text){
     saveAll();
     renderInventory();
   }else{
-    // Indicador visual de error / no encontrado
     flashScan(false, 'Código no registrado');
 
     const n = document.getElementById('scanName');
@@ -994,13 +1387,30 @@ document.getElementById('prefVibrate').addEventListener('change', (e)=>{ prefs.v
 /* ===== Etiquetas — Buscador con sugerencias ===== */
 function refreshLabelSelect(){ // resetea buscador al entrar a la pestaña
   selectedLabelCode = null;
+  labelCliente = "";
+  labelDestino = "";
+
   const s = document.getElementById('labelSearch');
   const box = document.getElementById('labelSuggestions');
   const prev = document.getElementById('previewWrap');
+  const c = document.getElementById('labelCliente');
+  const d = document.getElementById('labelDestino');
+
   if (s) s.value = "";
   if (box) box.innerHTML = 'Escribe para ver sugerencias…';
   if (prev) prev.innerHTML = '';
+  if (c) c.value = "";
+  if (d) d.value = "";
 }
+// Mantiene CLIENTE y DESTINO sincronizados con la vista previa
+document.getElementById('labelCliente')?.addEventListener('input', (e)=>{
+  labelCliente = e.target.value;
+  if (selectedLabelCode) showPreview();
+});
+document.getElementById('labelDestino')?.addEventListener('input', (e)=>{
+  labelDestino = e.target.value;
+  if (selectedLabelCode) showPreview();
+});
 function renderLabelSuggestions(){
   const box = document.getElementById('labelSuggestions');
   const q = (document.getElementById('labelSearch')?.value || "").toLowerCase().trim();
@@ -1044,57 +1454,134 @@ function showPreview(){
   const it = items.find(i=>i.code===selectedLabelCode);
   if(!it){ wrap.innerHTML = '<div class="muted">Producto no encontrado.</div>'; return; }
 
-  const dateTxt = it.createdISO ? new Date(it.createdISO).toLocaleDateString() : "";
+  // Toma los campos editables (si existen)
+  const cliente = (document.getElementById('labelCliente')?.value || "").trim();
+  const destino = (document.getElementById('labelDestino')?.value || "").trim();
+  const fechaImp = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
+
   const div = document.createElement('div');
   div.className="label-preview";
   div.innerHTML = `
-    <div class="model">${escapeHtml(it.nombre)}</div>
-    <div class="fabric">Tela: ${escapeHtml(it.tela)}</div>
-    <div class="sku">SKU: ${escapeHtml(it.sku||'')}</div>
-    <div class="date">${escapeHtml(dateTxt)}</div>
-    <svg id="barcodePrev"></svg>
+    <div class="label-title">MUEBLES KRILL S.A. DE C.V</div>
+    <div class="label-sub">CLIENTE: ${cliente ? escapeHtml(cliente) : ''}</div>
+    <div class="label-divider"></div>
+
+    <div class="label-row"><span class="k">MODELO:</span><span class="v">${escapeHtml(it.nombre)}</span></div>
+    <div class="label-row"><span class="k">TELA:</span><span class="v">${escapeHtml(it.tela)}</span></div>
+    <div class="label-row"><span class="k">SKU:</span><span class="v">${escapeHtml(it.sku||'')}</span></div>
+    <div class="label-row"><span class="k">DESTINO:</span><span class="v">${destino ? escapeHtml(destino) : ''}</span></div>
+    <div class="label-row"><span class="k">FECHA:</span><span class="v">${escapeHtml(fechaImp)}</span></div>
+
+    <div class="barcode-wrap">
+      <svg id="barcodePrev"></svg>
+      <div class="code-text">${escapeHtml(it.code)}</div>
+    </div>
   `;
   wrap.appendChild(div);
-  try{ JsBarcode("#barcodePrev", it.code, {format:"CODE128", width:2, height:60, displayValue:true}); }catch(e){}
-}
 
-/* ===== Impresión de etiqueta ===== */
+  try{
+    JsBarcode("#barcodePrev", it.code, { format:"CODE128", width:2, height:60, displayValue:true });
+  }catch(e){}
+}
+// === (Opcional) Vista previa en vivo al escribir CLIENTE/DESTINO ===
+(function bindLabelLivePreview(){
+  const cli = document.getElementById('labelCliente');
+  const des = document.getElementById('labelDestino');
+  if (cli) cli.addEventListener('input', showPreview);
+  if (des) des.addEventListener('input', showPreview);
+})();
+
+// === BLOQUE DE IMPRESIÓN (REEMPLAZO COMPLETO) ===
 document.getElementById('btnPrint').addEventListener('click', ()=>{
-  if(!selectedLabelCode){ alert("Primero busca y selecciona un producto de las sugerencias."); return; }
+  if(!selectedLabelCode){
+    alert("Primero busca y selecciona un producto de las sugerencias.");
+    return;
+  }
   const it = items.find(i=>i.code===selectedLabelCode);
   if(!it){ alert("Producto no encontrado"); return; }
-const dateTxt = new Date().toLocaleDateString();
-  const w = window.open('', '', 'width=420,height=360');
+
+  const cliente = (document.getElementById('labelCliente')?.value || "").trim();
+  const destino = (document.getElementById('labelDestino')?.value || "").trim();
+  const fechaImp = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+  const w = window.open('', '', 'width=900,height=650');
+
   const html = `
-    <html><head><title>Etiqueta ${escapeHtml(it.code)}</title>
-    <style>
-      body{font-family:Arial, sans-serif; margin:0; padding:16px; text-align:center}
-      .model{font-size:20px; font-weight:700}
-      .fabric{font-size:14px; margin-top:2px}
-      .sku{font-size:14px; margin-top:2px}
-      .date{font-size:14px; margin-top:2px}
-      svg{margin-top:10px}
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-    </head><body>
-      <div class="model">${escapeHtml(it.nombre)}</div>
-      <div class="fabric">Tela: ${escapeHtml(it.tela)}</div>
-      <div class="sku">SKU: ${escapeHtml(it.sku||'')}</div>
-      <div class="date">${escapeHtml(dateTxt)}</div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Etiqueta ${escapeHtml(it.code)}</title>
+  <style>
+    @page { size: 152.4mm 101.6mm; margin: 0; }
+    html, body { margin:0; padding:0; }
+    body {
+      width: 152.4mm; height: 101.6mm;
+      font-family: Arial, sans-serif;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .page { position: relative; width: 152.4mm; height: 101.6mm; box-sizing: border-box; padding: 6mm 8mm; }
+    .header { text-align: center; }
+    .brand { font-weight: 700; font-size: 24pt; line-height: 1; white-space: nowrap; }
+    .cliente { font-weight: 700; font-size: 24pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
+    .divider { height: 2px; background: #000; margin: 3mm 0 4mm; border-radius: 2px; }
+    .rows { width: calc(100% - 16mm); margin: 0 auto; }
+    .row{ display:flex; justify-content:center; gap:3mm; align-items:baseline; margin:1mm 0; flex-wrap:wrap; }
+    .k{ font: 700 24pt Arial, sans-serif; letter-spacing:.2pt; }
+    .v{ font: 400 22pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
+    .barcode { margin-top: 4mm; text-align: center; }
+    .barcode svg { width: 100%; height: 45mm; }
+    .code-text { font-size: 14pt; margin-top: 1mm; letter-spacing: 1px; }
+    @media print { .page { padding: 6mm 8mm; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">MUEBLES KRILL S.A. DE C.V</div>
+      <div class="cliente">CLIENTE: ${escapeHtml(cliente)}</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="rows">
+      <div class="row"><span class="k">MODELO:</span><span class="v">${escapeHtml(it.nombre)}</span></div>
+      <div class="row"><span class="k">TELA:</span><span class="v">${escapeHtml(it.tela)}</span></div>
+      <div class="row"><span class="k">SKU:</span><span class="v">${escapeHtml(it.sku||'')}</span></div>
+      <div class="row"><span class="k">DESTINO:</span><span class="v">${escapeHtml(destino)}</span></div>
+      <div class="row"><span class="k">FECHA:</span><span class="v">${escapeHtml(fechaImp)}</span></div>
+    </div>
+
+    <div class="barcode">
       <svg id="b"></svg>
-      <script>
-        try{
-          JsBarcode("#b","${escapeJs(it.code)}",{format:"CODE128",width:2,height:60,displayValue:true});
-        }catch(e){}
-        window.onload=function(){window.print();}
-      <\/script>
-    </body></html>
+      <div class="code-text">${escapeHtml(it.code)}</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function(){
+      try{
+        JsBarcode("#b","${escapeJs(it.code)}",{
+          format:"CODE128",
+          width: 2,
+          displayValue: true,
+          font: "Arial",
+          fontSize: 12
+        });
+      }catch(e){}
+      window.print();
+    };
+  <\/script>
+</body>
+</html>
   `;
+
   w.document.write(html);
   w.document.close();
   w.focus();
 });
-
 /* ===== Botones de +1 / +N en pestaña Escanear ===== */
 document.getElementById('btnPlus1').addEventListener('click', ()=>{
   const code = document.getElementById('scanCode').value.trim();
@@ -1126,11 +1613,18 @@ document.getElementById('btnPlusN').addEventListener('click', ()=>{
   document.getElementById('scanQty').value = item.cantidad;
 });
 
-/* ===== Preferencias ===== */
-document.getElementById('prefBeep').addEventListener('change', (e)=>{ prefs.beep = e.target.checked; saveAll(); });
-document.getElementById('prefVibrate').addEventListener('change', (e)=>{ prefs.vibrate = e.target.checked; saveAll(); });
-
 /* ===== Sesión completa (JSON) ===== */
+// Permitir re-seleccionar el mismo archivo sin recargar
+const jsonInput = document.getElementById('jsonSessionFile');
+if(jsonInput){
+  jsonInput.addEventListener('click', ()=>{ jsonInput.value = ''; });
+}
+
+// (opcional si luego usas el CSV): hace lo mismo para el CSV
+const csvInput = document.getElementById('csvFile');
+if(csvInput){
+  csvInput.addEventListener('click', ()=>{ csvInput.value = ''; });
+}
 document.getElementById('btnExportSession').addEventListener('click', ()=>{
   const payload = {
     version: 2,
@@ -1149,8 +1643,10 @@ document.getElementById('btnExportSession').addEventListener('click', ()=>{
 });
 document.getElementById('btnImportSession').addEventListener('click', ()=>{
   const input = document.getElementById('jsonSessionFile');
-  if(!input.files || !input.files[0]){ alert("Selecciona un archivo .json de sesión completa."); return; }
-  if(!confirm("Esto reemplazará TODO el inventario actual, movimientos, contador KLL, preferencias y (si vienen) los cortes mensuales. ¿Continuar?")) return;
+  if(!input.files || !input.files[0]){ 
+    alert("Selecciona un archivo .json de sesión completa."); 
+    return; 
+  }
 
   const file = input.files[0];
   const reader = new FileReader();
@@ -1181,9 +1677,143 @@ document.getElementById('btnImportSession').addEventListener('click', ()=>{
     }
   };
   reader.readAsText(file);
-});
+}); // ←← Asegúrate de que este cierre exista
+// === Importar CSV (Totales; requiere columna "Código") ===
+(function bindCsvImport(){
+  const btn = document.getElementById('btnImport');
+  const input = document.getElementById('csvFile');
+  if(!btn || !input) return;
 
+  // Permitir re-seleccionar el mismo archivo sin recargar
+  input.addEventListener('click', ()=>{ input.value = ''; });
+
+  btn.addEventListener('click', ()=>{
+    if(!input.files || !input.files[0]){
+      alert("Selecciona un archivo .csv primero.");
+      return;
+    }
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (e)=>{
+      try{
+        const rows = parseCSV(e.target.result);
+        if(!rows.length){
+          alert("El CSV está vacío."); return;
+        }
+
+        // Validación mínima: necesitamos la columna "Código" o "Codigo"
+        const hasCodigo = Object.keys(rows[0]).some(h => h.trim().toLowerCase() === 'código' || h.trim().toLowerCase() === 'codigo');
+        if(!hasCodigo){
+          alert('El CSV debe incluir la columna "Código".'); 
+          return;
+        }
+
+        let creados = 0, actualizados = 0, movs = 0;
+
+        rows.forEach(r=>{
+          const get = (k) => {
+            const key = Object.keys(r).find(h => h.trim().toLowerCase() === k.toLowerCase());
+            return key ? (r[key]||'').trim() : '';
+          };
+
+          const code      = get('código') || get('codigo');
+          if(!code) return;
+
+          const sku       = get('sku');
+          const nombre    = get('modelo') || get('nombre') || '';
+          const tela      = get('tela') || '';
+          const cantStr   = get('cantidad');
+          const qty       = Number.parseInt(cantStr, 10);
+          const cantidad  = Number.isFinite(qty) && qty > 0 ? qty : 1;
+
+          const nowISO = new Date().toISOString();
+          const it = items.find(i => i.code === code);
+
+          if(it){
+            it.nombre   = nombre || it.nombre;
+            it.tela     = tela   || it.tela;
+            it.sku      = sku    || it.sku;
+            it.cantidad = (Number(it.cantidad)||0) + cantidad;
+            actualizados++;
+
+            moves.push({
+              id: genId(),
+              dateISO: nowISO,
+              code: it.code,
+              sku: it.sku,
+              nombre: it.nombre,
+              tela: it.tela,
+              delta: +cantidad,
+              type: 'import'
+            });
+            movs++;
+          }else{
+            items.push({
+              code,
+              sku,
+              nombre,
+              tela,
+              cantidad,
+              createdISO: nowISO
+            });
+            creados++;
+
+            moves.push({
+              id: genId(),
+              dateISO: nowISO,
+              code,
+              sku,
+              nombre,
+              tela,
+              delta: +cantidad,
+              type: 'import'
+            });
+            movs++;
+          }
+        });
+
+        saveAll();
+        renderInventory();
+        refreshLabelSelect();
+
+        alert(`Importación terminada.\nCreados: ${creados}\nActualizados: ${actualizados}\nMovimientos: ${movs}`);
+      }catch(err){
+        console.error(err);
+        alert("No se pudo leer el CSV. Verifica el formato.");
+      }
+    };
+
+    reader.readAsText(file);
+  });
+})();
 /* ===== Utilidades ===== */
+// === Helper para resetear <input type="file"> de forma segura ===
+function resetFileInput(el){
+  try{
+    el.value = '';
+  }catch(e){
+    // fallback raro de algunos navegadores: clonar y reemplazar
+    const nuevo = el.cloneNode();
+    el.parentNode.replaceChild(nuevo, el);
+  }
+}
+// Normaliza lo leído por el escáner para comparar códigos y SKUs
+function normalizeScan(s){
+  if(!s) return "";
+  let t = String(s).normalize('NFKC').trim();
+
+  // Reemplaza apóstrofos/acento por guion
+  t = t.replace(/[\u00B4\u2019\u0027\u0060\u02CA\u02B9\u2018]/g, '-');
+
+  // Reemplaza dashes Unicode por guion simple
+  t = t.replace(/[\u2013\u2014\u2212\u2010\u2011]/g, '-');
+
+  // Quita espacios
+  t = t.replace(/\s+/g, '');
+
+  return t.toUpperCase();
+}
 function beep(){
   try{
     const ac = new (window.AudioContext||window.webkitAudioContext)();
@@ -1207,6 +1837,12 @@ function flashScan(ok, msg){
   clearTimeout(el._hide2);
   el._hide1 = setTimeout(()=>{ el.style.opacity = '0'; }, 700);
   el._hide2 = setTimeout(()=>{ el.style.display = 'none'; }, 1000);
+}
+function formatDateDDMMYYYY(d){
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 function downloadCSV(filename, headers, rows){
   const csv = headers.join(",")+"\n"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
