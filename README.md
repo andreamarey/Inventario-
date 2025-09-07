@@ -1504,7 +1504,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   const destino = (document.getElementById('labelDestino')?.value || "").trim();
   const fechaImp = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
 
-  const w = window.open('', '', 'width=900,height=650');
+  const w = window.open('', '', 'width=1100,height=800');
 
   const html = `
 <!DOCTYPE html>
@@ -1513,26 +1513,26 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   <meta charset="utf-8">
   <title>Etiqueta ${escapeHtml(it.code)}</title>
   <style>
-    @page { size: 152.4mm 101.6mm; margin: 0; }
+    @page { size: 150mm 100mm; margin: 0; }
     html, body { margin:0; padding:0; }
     body {
-      width: 152.4mm; height: 101.6mm;
+      width: 150mm; height: 100mm;
       font-family: Arial, sans-serif;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    .page { position: relative; width: 152.4mm; height: 101.6mm; box-sizing: border-box; padding: 6mm 8mm; }
+    .page { position: relative; width: 150mm; height: 100mm; box-sizing: border-box; padding: 5mm 7mm; }
     .header { text-align: center; }
-    .brand { font-weight: 700; font-size: 24pt; line-height: 1; white-space: nowrap; }
-    .cliente { font-weight: 700; font-size: 24pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
-    .divider { height: 2px; background: #000; margin: 3mm 0 4mm; border-radius: 2px; }
-    .rows { width: calc(100% - 16mm); margin: 0 auto; }
+    .brand { font-weight: 700; font-size: 22pt; line-height: 1; white-space: nowrap; }
+    .cliente { font-weight: 700; font-size: 20pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
+    .divider { height: 2px; background: #000; margin: 2.5mm 0 3mm; border-radius: 2px; }
+    .rows { width: 100%; margin: 0 auto; }
     .row{ display:flex; justify-content:center; gap:3mm; align-items:baseline; margin:1mm 0; flex-wrap:wrap; }
-    .k{ font: 700 24pt Arial, sans-serif; letter-spacing:.2pt; }
-    .v{ font: 400 22pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
-    .barcode { margin-top: 4mm; text-align: center; }
-    .barcode svg { width: 100%; height: 45mm; }
-    .code-text { font-size: 14pt; margin-top: 1mm; letter-spacing: 1px; }
+    .k{ font: 700 18pt Arial, sans-serif; letter-spacing:.2pt; }
+    .v{ font: 400 18pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
+    .barcode { margin-top: 3mm; text-align: center; }
+    .barcode svg { width: 100%; height: 30mm; }
+    .code-text { font-size: 600 14pt Arial; margin-top: 0.5mm; letter-spacing: 1px; }
     @media print { .page { padding: 6mm 8mm; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
