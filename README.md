@@ -1492,6 +1492,7 @@ function showPreview(){
 })();
 
 // === BLOQUE DE IMPRESIÓN (REEMPLAZO COMPLETO) ===
+<script>
 document.getElementById('btnPrint').addEventListener('click', ()=>{
   if(!selectedLabelCode){
     alert("Primero busca y selecciona un producto de las sugerencias.");
@@ -1504,7 +1505,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   const destino = (document.getElementById('labelDestino')?.value || "").trim();
   const fechaImp = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
 
-  const w = window.open('', '', 'width=900,height=650');
+  const w = window.open('', '', 'width=1100,height=800');
 
   const html = `
 <!DOCTYPE html>
@@ -1513,32 +1514,53 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   <meta charset="utf-8">
   <title>Etiqueta ${escapeHtml(it.code)}</title>
   <style>
-    @page { size: 152.4mm 101.6mm; margin: 0; }
+    /* --- TAMAÑO EXACTO 10x15 cm en horizontal (150mm x 100mm) --- */
+    @page { size: 150mm 100mm; margin: 0; }
     html, body { margin:0; padding:0; }
     body {
-      width: 152.4mm; height: 101.6mm;
+      width: 150mm; height: 100mm;
       font-family: Arial, sans-serif;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    .page { position: relative; width: 152.4mm; height: 101.6mm; box-sizing: border-box; padding: 6mm 8mm; }
+    /* Lienzo con padding, sin saltos de página */
+    .page {
+      position: relative;
+      width: 150mm; height: 100mm;
+      box-sizing: border-box;
+      padding: 5mm 7mm;          /* respira pero cabe todo */
+      page-break-inside: avoid;
+      overflow: hidden;          /* evita derrames que generen 2a hoja */
+    }
+
+    /* Encabezado y cliente CENTRADOS */
     .header { text-align: center; }
-    .brand { font-weight: 700; font-size: 24pt; line-height: 1; white-space: nowrap; }
-    .cliente { font-weight: 700; font-size: 24pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
-    .divider { height: 2px; background: #000; margin: 3mm 0 4mm; border-radius: 2px; }
-    .rows { width: calc(100% - 16mm); margin: 0 auto; }
-    .row{ display:flex; justify-content:center; gap:3mm; align-items:baseline; margin:1mm 0; flex-wrap:wrap; }
-    .k{ font: 700 24pt Arial, sans-serif; letter-spacing:.2pt; }
-    .v{ font: 400 22pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
-    .barcode { margin-top: 4mm; text-align: center; }
-    .barcode svg { width: 100%; height: 45mm; }
-    .code-text { font-size: 14pt; margin-top: 1mm; letter-spacing: 1px; }
-    @media print { .page { padding: 6mm 8mm; } }
+    .brand  { font-weight: 700; font-size: 22pt; line-height: 1; white-space: nowrap; }
+    .cliente{ font-weight: 700; font-size: 20pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
+
+    /* Línea divisoria fina */
+    .divider { height: 2px; background: #000; margin: 2.5mm 0 3mm; border-radius: 2px; }
+
+    /* Bloque de campos (centrado en la página) */
+    .rows { width: 100%; margin: 0 auto; }
+    .row  { display:flex; justify-content:center; gap:3mm; align-items:baseline; margin:0.8mm 0; flex-wrap:wrap; }
+    .k    { font: 700 18pt Arial, sans-serif; letter-spacing:.2pt; }
+    .v    { font: 400 18pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
+
+    /* Código de barras CENTRADO y grande, pero dentro de una hoja */
+    .barcode     { margin-top: 3mm; text-align: center; }
+    .barcode svg { width: 100%; height: 30mm; } /* ← sube a 32–35mm si te cabe */
+    .code-text   { font: 600 14pt Arial, sans-serif; margin-top: 0.5mm; letter-spacing: 1px; }
+
+    @media print {
+      html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
 </head>
 <body>
   <div class="page">
+    <!-- Encabezado centrado -->
     <div class="header">
       <div class="brand">MUEBLES KRILL S.A. DE C.V</div>
       <div class="cliente">CLIENTE: ${escapeHtml(cliente)}</div>
@@ -1546,6 +1568,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
 
     <div class="divider"></div>
 
+    <!-- Campos (en orden). El bloque está centrado; texto de valores a la izquierda -->
     <div class="rows">
       <div class="row"><span class="k">MODELO:</span><span class="v">${escapeHtml(it.nombre)}</span></div>
       <div class="row"><span class="k">TELA:</span><span class="v">${escapeHtml(it.tela)}</span></div>
@@ -1554,6 +1577,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
       <div class="row"><span class="k">FECHA:</span><span class="v">${escapeHtml(fechaImp)}</span></div>
     </div>
 
+    <!-- Código de barras centrado y ancho completo -->
     <div class="barcode">
       <svg id="b"></svg>
       <div class="code-text">${escapeHtml(it.code)}</div>
@@ -1565,7 +1589,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
       try{
         JsBarcode("#b","${escapeJs(it.code)}",{
           format:"CODE128",
-          width: 2,
+          width: 2,              // grosor de barra (sube a 2.2–2.6 si quieres líneas más gruesas)
           displayValue: true,
           font: "Arial",
           fontSize: 12
@@ -1582,6 +1606,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   w.document.close();
   w.focus();
 });
+</script>
 /* ===== Botones de +1 / +N en pestaña Escanear ===== */
 document.getElementById('btnPlus1').addEventListener('click', ()=>{
   const code = document.getElementById('scanCode').value.trim();
