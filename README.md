@@ -1606,7 +1606,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   w.document.close();
   w.focus();
 });
-</script>
+
 /* ===== Botones de +1 / +N en pestaña Escanear ===== */
 document.getElementById('btnPlus1').addEventListener('click', ()=>{
   const code = document.getElementById('scanCode').value.trim();
