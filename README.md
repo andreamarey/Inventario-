@@ -1584,7 +1584,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
     </div>
   </div>
 
-   <\/script>
+  <script>
     window.onload = function(){
       try{
         JsBarcode("#b","${escapeJs(it.code)}",{
@@ -1606,7 +1606,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   w.document.close();
   w.focus();
 });
- <script>
+</script>
 /* ===== Botones de +1 / +N en pestaña Escanear ===== */
 document.getElementById('btnPlus1').addEventListener('click', ()=>{
   const code = document.getElementById('scanCode').value.trim();
