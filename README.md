@@ -794,48 +794,110 @@ function inRange(iso){
   }
   return true;
 }
+function hasActiveDateRange(){
+  const f = document.getElementById('dateFrom')?.value;
+  const t = document.getElementById('dateTo')?.value;
+  return !!(f || t);
+}
+function qtyInActiveRangeByCode(code){
+  let total = 0;
+  for (const m of moves){
+    if (m.code === code && inRange(m.dateISO)){
+      total += Number(m.delta) || 0;
+    }
+  }
+  return total;
+}
 function renderInventory(){
   const tbody = document.getElementById('inventoryTableBody');
   if(!tbody) return;
+
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
+  const byText = (i)=>{
+    return !q || i.nombre.toLowerCase().includes(q) ||
+                 i.tela.toLowerCase().includes(q)   ||
+                 (i.sku||"").toLowerCase().includes(q) ||
+                 i.code.toLowerCase().includes(q);
+  };
+
+  const hasRange = hasActiveDateRange();
+
+  // Cambia el encabezado de la columna de cantidad según el modo
+  const qtyTh = document.querySelector('.inv-table thead th:nth-child(5)');
+  if (qtyTh) qtyTh.textContent = hasRange ? 'Cantidad (en rango)' : 'Cantidad';
+
+  // Base: filtrar por texto
+  let base = items.filter(i=> byText(i))
+                  .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""));
+
   tbody.innerHTML = "";
 
-  const data = items
-    .filter(i=>{
-      const okQ = !q || i.nombre.toLowerCase().includes(q) || i.tela.toLowerCase().includes(q) ||
-                        (i.sku||"").toLowerCase().includes(q) || i.code.toLowerCase().includes(q);
-      const okD = inRange(i.createdISO);
-      return okQ && okD;
-    })
-    .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""));
-
-  if(data.length===0){
+  if (base.length === 0){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="7" class="muted" style="text-align:center">No hay resultados con el filtro actual.</td>`;
     tbody.appendChild(tr);
-    // Aun así refrescamos el historial filtrado
-    renderHistory();
+    renderHistory(); // mantener sincronizado
     return;
   }
 
-  data.forEach(i=>{
-    const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
-  const tr = document.createElement('tr');
-tr.innerHTML = `
-  <td>${escapeHtml(i.nombre)}</td>
-  <td>${escapeHtml(i.tela)}</td>
-  <td>${escapeHtml(i.sku||'')}</td>
-  <td>${escapeHtml(i.code)}</td>
-  <td style="text-align:right">${i.cantidad}</td>
-  <td>${escapeHtml(dateTxt)}</td>
-  <td>
-    <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
-      <i class="fa fa-trash"></i> Eliminar
-    </button>
-  </td>
-`;
-tbody.appendChild(tr);
-  });
+  // Si hay rango de fechas activo, recalculamos cantidad por movimientos en el rango
+  if (hasRange){
+    // Si quieres ocultar filas con 0 en el rango, deja el filtro de >0.
+    // Si prefieres mostrarlas con 0, elimina el .filter(...)
+    const withRangeQty = base.map(i=>{
+      const qty = qtyInActiveRangeByCode(i.code);
+      return { ...i, _qtyRange: qty };
+    })
+    .filter(i => i._qtyRange > 0); // <- quita este filtro si quieres mostrar también 0
+
+    if (withRangeQty.length === 0){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="7" class="muted" style="text-align:center">Sin movimientos en el rango seleccionado.</td>`;
+      tbody.appendChild(tr);
+      renderHistory();
+      return;
+    }
+
+    withRangeQty.forEach(i=>{
+      const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(i.nombre)}</td>
+        <td>${escapeHtml(i.tela)}</td>
+        <td>${escapeHtml(i.sku||'')}</td>
+        <td>${escapeHtml(i.code)}</td>
+        <td style="text-align:right">${i._qtyRange}</td>
+        <td>${escapeHtml(dateTxt)}</td>
+        <td>
+          <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
+            <i class="fa fa-trash"></i> Eliminar
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  }else{
+    // Sin rango de fechas: stock acumulado como antes
+    base.forEach(i=>{
+      const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(i.nombre)}</td>
+        <td>${escapeHtml(i.tela)}</td>
+        <td>${escapeHtml(i.sku||'')}</td>
+        <td>${escapeHtml(i.code)}</td>
+        <td style="text-align:right">${i.cantidad}</td>
+        <td>${escapeHtml(dateTxt)}</td>
+        <td>
+          <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
+            <i class="fa fa-trash"></i> Eliminar
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 
   // Mantén el historial sincronizado con los mismos filtros
   renderHistory();
@@ -897,24 +959,46 @@ tr.innerHTML = `
 `;
 tbody.appendChild(tr);
   });
-}function exportFilteredTotals(){
+}
+function exportFilteredTotals(){
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
-  const rows = items
-    .filter(i=>{
-      const okQ = !q || i.nombre.toLowerCase().includes(q) || i.tela.toLowerCase().includes(q) ||
-                        (i.sku||"").toLowerCase().includes(q) || i.code.toLowerCase().includes(q);
-      const okD = inRange(i.createdISO);
-      return okQ && okD;
-    })
-    .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""));
-  if(rows.length===0){ alert("No hay datos para exportar con el filtro actual."); return; }
+  const hasRange = hasActiveDateRange();
 
-  const headers = ["Modelo","Tela","SKU","Código","Cantidad","Fecha Alta"];
-  const data = rows.map(i=>[
-    i.nombre, i.tela, i.sku||"", i.code, i.cantidad,
-    i.createdISO ? new Date(i.createdISO).toLocaleDateString() : ""
-  ]);
-  downloadCSV("inventario_totales_filtrado.csv", headers, data);
+  const byText = (i)=>{
+    return !q || i.nombre.toLowerCase().includes(q) ||
+                 i.tela.toLowerCase().includes(q)   ||
+                 (i.sku||"").toLowerCase().includes(q) ||
+                 i.code.toLowerCase().includes(q);
+  };
+
+  let rows = items.filter(i=> byText(i))
+                  .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""));
+
+  if (hasRange){
+    const data = rows.map(i=>{
+      const qty = qtyInActiveRangeByCode(i.code);
+      return { ...i, _qtyRange: qty };
+    })
+    .filter(i=> i._qtyRange > 0); // mismo criterio que la tabla
+
+    if (data.length===0){ alert("Sin movimientos en el rango para exportar."); return; }
+
+    const headers = ["Modelo","Tela","SKU","Código","Cantidad (en rango)","Fecha Alta"];
+    const out = data.map(i=>[
+      i.nombre, i.tela, i.sku||"", i.code, i._qtyRange,
+      i.createdISO ? new Date(i.createdISO).toLocaleDateString() : ""
+    ]);
+    downloadCSV("inventario_totales_en_rango.csv", headers, out);
+
+  }else{
+    if (rows.length===0){ alert("No hay datos para exportar con el filtro actual."); return; }
+    const headers = ["Modelo","Tela","SKU","Código","Cantidad","Fecha Alta"];
+    const out = rows.map(i=>[
+      i.nombre, i.tela, i.sku||"", i.code, i.cantidad,
+      i.createdISO ? new Date(i.createdISO).toLocaleDateString() : ""
+    ]);
+    downloadCSV("inventario_totales_actual.csv", headers, out);
+  }
 }
 function exportFilteredHistory(){
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
@@ -1504,7 +1588,7 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   const destino = (document.getElementById('labelDestino')?.value || "").trim();
   const fechaImp = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
 
-  const w = window.open('', '', 'width=1100,height=800');
+  const w = window.open('', '', 'width=900,height=650');
 
   const html = `
 <!DOCTYPE html>
@@ -1512,29 +1596,70 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
 <head>
   <meta charset="utf-8">
   <title>Etiqueta ${escapeHtml(it.code)}</title>
-  <style>
-    @page { size: 150mm 100mm; margin: 0; }
-    html, body { margin:0; padding:0; }
-    body {
-      width: 150mm; height: 100mm;
-      font-family: Arial, sans-serif;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    .page { position: relative; width: 150mm; height: 100mm; box-sizing: border-box; padding: 5mm 7mm; }
-    .header { text-align: center; }
-    .brand { font-weight: 700; font-size: 22pt; line-height: 1; white-space: nowrap; }
-    .cliente { font-weight: 700; font-size: 20pt; line-height: 1.05; margin-top: 1mm; word-break: break-word; }
-    .divider { height: 2px; background: #000; margin: 2.5mm 0 3mm; border-radius: 2px; }
-    .rows { width: 100%; margin: 0 auto; }
-    .row{ display:flex; justify-content:center; gap:3mm; align-items:baseline; margin:1mm 0; flex-wrap:wrap; }
-    .k{ font: 700 18pt Arial, sans-serif; letter-spacing:.2pt; }
-    .v{ font: 400 18pt Arial, sans-serif; min-width:40mm; text-align:left; word-break:break-word; }
-    .barcode { margin-top: 3mm; text-align: center; }
-    .barcode svg { width: 100%; height: 30mm; }
-    .code-text { font-size: 600 14pt Arial; margin-top: 0.5mm; letter-spacing: 1px; }
-    @media print { .page { padding: 6mm 8mm; } }
-  </style>
+<style>
+  /* Hoja 10×15 cm horizontal (150 × 100 mm) */
+  @page { size: 150mm 100mm; margin: 0; }
+  html, body { margin:0; padding:0; }
+  body{
+    width:150mm; height:100mm;
+    font-family: Arial, sans-serif;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Lienzo con poco padding para ganar altura útil */
+  .page{
+    position:relative;
+    width:150mm; height:100mm;
+    box-sizing:border-box;
+    padding:4mm 8mm; /* <— menos que antes */
+  }
+
+  /* Encabezados centrados */
+  .header{ text-align:center; }
+  .brand{
+    font-weight:700;           /* Arial Bold */
+    font-size:18pt;            /* más compacto que 24pt */
+    line-height:1;             /* 1 sola línea */
+    white-space:nowrap;
+  }
+  .cliente{
+    font-weight:700;
+    font-size:16pt;
+    line-height:1;
+    margin-top:1mm;
+    word-break:break-word;
+  }
+
+  /* Línea */
+  .divider{
+    height:1.5px; background:#000;
+    margin:1.5mm 0 2mm; border-radius:2px;
+  }
+
+  /* Campos centrados */
+  .rows{ width:calc(100% - 16mm); margin:0 auto; }
+  .row{
+    display:flex; justify-content:center; gap:2mm;
+    align-items:baseline; margin:0.5mm 0; flex-wrap:wrap;
+  }
+  .k{ font:700 18pt Arial, sans-serif; letter-spacing:.2pt; }
+  .v{ font:400 16pt Arial, sans-serif; min-width:36mm; text-align:left; word-break:break-word; }
+
+  /* Código de barras centrado */
+  .barcode{ margin-top:3mm; text-align:center; }
+  .barcode svg{
+    width:100%;
+    height:36mm;               /* alto grande pero que cabe */
+  }
+  .code-text{
+    font-size:10pt;
+    margin-top:0.5mm;
+    letter-spacing:.5px;
+  }
+
+  @media print { .page{ padding:4mm 8mm; } }
+</style>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
 </head>
 <body>
@@ -1563,13 +1688,13 @@ document.getElementById('btnPrint').addEventListener('click', ()=>{
   <script>
     window.onload = function(){
       try{
-        JsBarcode("#b","${escapeJs(it.code)}",{
-          format:"CODE128",
-          width: 2,
-          displayValue: true,
-          font: "Arial",
-          fontSize: 12
-        });
+       JsBarcode("#b","${escapeJs(it.code)}",{
+  format:"CODE128",
+  width: 2,            // grosor de barra; sube a 2.2–2.5 si lo quieres más “pesado”
+  displayValue: false, // <— quitamos el texto dentro del barcode
+  font: "Arial",
+  fontSize: 12
+});
       }catch(e){}
       window.print();
     };
