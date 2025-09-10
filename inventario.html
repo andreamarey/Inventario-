@@ -396,11 +396,24 @@ button i {
   border-top: 1px solid var(--border);
 }
 
-/* Contenedor con scroll para las tablas */
-.scroll-wrap{
-  max-height: 360px;     /* ajusta si necesitas más/menos alto visible */
+/* Scroll adaptable por viewport */
+#inventario .scroll-wrap{
+  /* ventana − (header + barra de filtros + márgenes aprox.) */
+  max-height: calc(100vh - 260px);
   overflow: auto;
   border-radius: 12px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+/* margen para el contenedor con scroll */
+#inventario .inv-accordion details > .scroll-wrap{
+  margin-top: 8px;
+}
+/* Móviles/tablets: un poco más de aire */
+@media (max-width: 768px){
+  #inventario .scroll-wrap{
+    max-height: calc(100vh - 320px);
+  }
 }
 </style>
 </head>
@@ -490,7 +503,7 @@ button i {
       <summary style="cursor:pointer;font-weight:700">
         Totales (filtrados) — <span id="totalesMeta" class="muted">…</span>
       </summary>
-      <div class="scroll-wrap" style="max-height:45vh; overflow:auto; margin-top:8px;">
+      <div class="scroll-wrap">
         <table class="inv-table">
           <thead>
             <tr>
@@ -514,7 +527,7 @@ button i {
       <summary style="cursor:pointer;font-weight:700">
         Historial (movimientos filtrados) — <span id="movsMeta" class="muted">…</span>
       </summary>
-      <div class="scroll-wrap" style="max-height:45vh; overflow:auto; margin-top:8px;">
+      <div class="scroll-wrap">
         <table class="mov-table">
           <thead>
             <tr>
