@@ -664,12 +664,15 @@ let selectedLabelCode = null;
   if (chkBeep) chkBeep.checked = !!prefs.beep;
   if (chkVib)  chkVib.checked  = !!prefs.vibrate;
 
-  // Asegura IDs de movimientos ya guardados (definición de ensureMoveIds más abajo en tu archivo)
-  try { if (typeof ensureMoveIds === 'function') ensureMoveIds(); } catch(_){}
+// Asegura IDs de movimientos ya guardados
+try { if (typeof ensureMoveIds === 'function') ensureMoveIds(); } catch(_){}
 
-  // Pinta vistas iniciales
-  try { renderInventory(); } catch(_){}
-  try { refreshLabelSelect(); } catch(_){}
+// MIGRACIÓN: añade 'flow' a movimientos antiguos
+try { if (typeof migrateMovesFlow === 'function') migrateMovesFlow(); } catch(_){}
+
+// Pinta vistas iniciales
+try { renderInventory(); } catch(_){}
+try { refreshLabelSelect(); } catch(_){}
 })();
 
 /* ===== Exportaciones desde Config (botones "Totales" y "Movimientos") ===== */
@@ -826,14 +829,16 @@ document.getElementById('btnGenerate').addEventListener('click', ()=>{
       nombre: existing.nombre,
       tela: existing.tela,
       delta: +1,
-      type: 'register'
+      type: 'register',
+      flow: 'entrada',   // ← nuevo
+      qty:  1     // ← nuevo (magnitud positiva)
     });
     alert(`Se sumó +1 a ${existing.nombre} (${existing.tela}) · SKU ${existing.sku||'(sin SKU)'}\nCódigo: ${existing.code}`);
   }else{
     const code = "KLL-" + String(kllCounter).padStart(4,"0");
     kllCounter++;
     items.push({ code, sku, nombre, tela, cantidad:1, createdISO:nowISO });
-    moves.push({ id: genId(), dateISO: nowISO, code, sku, nombre, tela, delta:+1, type:'register' });
+    moves.push({ id: genId(), dateISO: nowISO, code, sku, nombre, tela, delta:+1, type:'register', flow:'entrada', qty:  1 });
     alert(`Nuevo producto creado con código ${code}`);
   }
 
@@ -872,20 +877,11 @@ function hasActiveDateRange(){
 
 // Suma de movimientos (Δ) para un código dentro del rango activo
 function qtyInActiveRangeByCode(code){
-  const fromVal = document.getElementById('dateFrom')?.value || null;
-  const toVal   = document.getElementById('dateTo')?.value   || null;
-
-  const start = fromVal ? new Date(fromVal + "T00:00:00") : null;
-  const end   = toVal   ? new Date(toVal   + "T23:59:59.999") : null;
-
   let total = 0;
-  for(const m of moves){
-    if(m.code !== code) continue;
-    const d = m.dateISO ? new Date(m.dateISO) : null;
-    if(!d) continue;
-    if(start && d < start) continue;
-    if(end   && d > end)   continue;
-    total += (Number(m.delta) || 0);
+  for (const m of moves){
+    if (m.code === code && inRange(m.dateISO)){
+      total += signedDelta(m); // usa flujo (entrada/salida/devolución)
+    }
   }
   return total;
 }
@@ -1005,7 +1001,7 @@ function renderHistory(){
     .filter(m=>{
       const okQ = !q || m.nombre.toLowerCase().includes(q) || m.tela.toLowerCase().includes(q) ||
                         (m.sku||"").toLowerCase().includes(q) || m.code.toLowerCase().includes(q);
-      const okD = inRange(m.dateISO); // tu helper existente
+      const okD = inRange(m.dateISO);
       return okQ && okD;
     })
     .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""));
@@ -1016,27 +1012,22 @@ function renderHistory(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="9" class="muted" style="text-align:center">No hay movimientos para este filtro.</td>`;
     tbody.appendChild(tr);
-    // meta
-    const meta = document.getElementById('movsMeta');
-    if (meta) meta.textContent = `0 movs · ΣΔ 0`;
     return;
   }
 
-  // Asegura IDs (por si faltó ensureMoveIds en la carga)
   let needSave = false;
   rows.forEach(m=>{
-    if(!m.id){
-      m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7)));
-      needSave = true;
-    }
+    if(!m.id){ m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7))); needSave = true; }
+    if(!m.flow){ m.flow = 'entrada'; needSave = true; }
+    if(m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); needSave = true; }
   });
   if(needSave) saveAll();
 
-  let sumDelta = 0;
-
   rows.forEach(m=>{
     const d = m.dateISO ? new Date(m.dateISO) : new Date();
-    sumDelta += (Number(m.delta)||0);
+    const sDelta = signedDelta(m);
+    const sDeltaTxt = sDelta>0 ? ('+'+sDelta) : String(sDelta);
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${d.toLocaleDateString()}</td>
@@ -1045,11 +1036,13 @@ function renderHistory(){
       <td>${escapeHtml(m.sku||'')}</td>
       <td>${escapeHtml(m.nombre)}</td>
       <td>${escapeHtml(m.tela)}</td>
-      <td style="text-align:right">${m.delta>0? '+'+m.delta : m.delta}</td>
+      <td style="text-align:right">${sDeltaTxt}</td>
       <td>
-        <span class="chip chip-${escapeHtml(m.type)}">
-          ${escapeHtml(m.type)}
-        </span>
+        <select onchange="changeMoveFlow('${escapeJs(m.id)}', this.value)">
+          <option value="entrada" ${m.flow==='entrada'?'selected':''}>Entrada</option>
+          <option value="salida" ${m.flow==='salida'?'selected':''}>Salida</option>
+          <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
+        </select>
       </td>
       <td>
         <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
@@ -1059,6 +1052,7 @@ function renderHistory(){
     `;
     tbody.appendChild(tr);
   });
+}
 
   // Meta del summary de Movimientos
   const meta = document.getElementById('movsMeta');
@@ -1537,7 +1531,9 @@ function processScan(text){
       nombre: item.nombre,
       tela: item.tela,
       delta: +1,
-      type: 'scan'
+      type: 'scan',
+      flow:'entrada', 
+      qty:  1 
     });
 
     if(prefs.beep) beep();
@@ -1821,7 +1817,7 @@ document.getElementById('btnPlus1').addEventListener('click', ()=>{
   if(!item) return;
   item.cantidad += 1;
   const nowISO = new Date().toISOString();
-  moves.push({id: genId(),dateISO:nowISO, code:item.code, sku:item.sku, nombre:item.nombre, tela:item.tela, delta:+1, type:'scan'});
+  moves.push({id: genId(),dateISO:nowISO, code:item.code, sku:item.sku, nombre:item.nombre, tela:item.tela, delta:+1, type:'scan', flow:'entrada', qty: Math.abs(+n) });
   if(prefs.beep) beep();
   if(prefs.vibrate && navigator.vibrate) navigator.vibrate(80);
   flashScan(true, `+1 ${item.nombre} (${item.tela})`);
@@ -1836,7 +1832,7 @@ document.getElementById('btnPlusN').addEventListener('click', ()=>{
   if(!item) return;
   item.cantidad += n;
   const nowISO = new Date().toISOString();
-  moves.push({id: genId(),dateISO:nowISO, code:item.code, sku:item.sku, nombre:item.nombre, tela:item.tela, delta:+n, type:'scan'});
+  moves.push({id: genId(),dateISO:nowISO, code:item.code, sku:item.sku, nombre:item.nombre, tela:item.tela, delta:+n, type:'scan', flow:'entrada', qty: 1 });
   if(prefs.beep) beep();
   if(prefs.vibrate && navigator.vibrate) navigator.vibrate([60,30,60]);
   flashScan(true, `+${n} ${item.nombre} (${item.tela})`);
@@ -1894,6 +1890,8 @@ document.getElementById('btnImportSession').addEventListener('click', ()=>{
         ? { beep: !!data.prefs.beep, vibrate: !!data.prefs.vibrate }
         : { beep: true, vibrate: true };
       if(Array.isArray(data.snapshots)) snapshots = data.snapshots;
+
+try { if (typeof migrateMovesFlow === 'function') migrateMovesFlow(); } catch(_){}
 
       saveAll();
       renderInventory();
@@ -1976,7 +1974,9 @@ document.getElementById('btnImportSession').addEventListener('click', ()=>{
               nombre: it.nombre,
               tela: it.tela,
               delta: +cantidad,
-              type: 'import'
+              type: 'import',
+              flow: 'entrada',   // ← nuevo
+              qty: Math.abs(+cantidad)
             });
             movs++;
           }else{
@@ -1998,11 +1998,15 @@ document.getElementById('btnImportSession').addEventListener('click', ()=>{
               nombre,
               tela,
               delta: +cantidad,
-              type: 'import'
+              type: 'import',
+              flow:'entrada', 
+              qty: Math.abs(+cantidad)
             });
             movs++;
           }
         });
+
+try { if (typeof migrateMovesFlow === 'function') migrateMovesFlow(); } catch(_){}
 
         saveAll();
         renderInventory();
@@ -2019,6 +2023,45 @@ document.getElementById('btnImportSession').addEventListener('click', ()=>{
   });
 })();
 /* ===== Utilidades ===== */
+// === Delta firmado según el "flujo" del movimiento (entrada/salida/devolucion)
+function signedDelta(m){
+  const qty = Math.abs(Number(m.delta ?? m.qty) || 0);
+  const flow = (m.flow || 'entrada'); // por defecto entrada para movs antiguos
+  return flow === 'salida' ? -qty : qty; // devolucion = +qty
+}
+// --- Acción al cambiar flujo ---
+window.changeMoveFlow = function(id, newFlow){
+  const m = moves.find(x=>x.id===id);
+  if(!m) return;
+
+  // delta firmado "antes"
+  const oldEff = signedDelta(m);
+
+  // actualiza flujo y asegura qty
+  m.flow = newFlow;
+  m.qty = Math.abs(Number(m.delta ?? m.qty) || 0);
+
+  // delta firmado "después"
+  const newEff = signedDelta(m);
+
+  // ajusta inventario del producto
+  const it = items.find(i=>i.code===m.code);
+  if(it){
+    it.cantidad = (Number(it.cantidad)||0) - oldEff + newEff;
+  }
+
+  saveAll();
+  renderInventory(); // esto refresca totales y vuelve a llamar a renderHistory()
+};
+// === Migración ligera: añade flow/qty a movimientos antiguos
+function migrateMovesFlow(){
+  let changed = false;
+  moves.forEach(m=>{
+    if (!m.flow){ m.flow = 'entrada'; changed = true; }
+    if (m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); changed = true; }
+  });
+  if (changed) saveAll();
+}
 // === Helper para resetear <input type="file"> de forma segura ===
 function resetFileInput(el){
   try{
