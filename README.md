@@ -996,21 +996,28 @@ function renderInventory(){
 }
 function renderHistory(){
   const tbody = document.getElementById('historyTableBody');
-  if(!tbody) return;
+  if (!tbody) return;
 
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
+
+  // Filtrar por texto y rango de fechas, ordenar por fecha desc
   const rows = moves
     .filter(m=>{
-      const okQ = !q || m.nombre.toLowerCase().includes(q) || m.tela.toLowerCase().includes(q) ||
-                        (m.sku||"").toLowerCase().includes(q) || m.code.toLowerCase().includes(q);
+      const okQ = !q ||
+        (m.nombre || "").toLowerCase().includes(q) ||
+        (m.tela   || "").toLowerCase().includes(q) ||
+        (m.sku    || "").toLowerCase().includes(q) ||
+        (m.code   || "").toLowerCase().includes(q);
       const okD = inRange(m.dateISO);
       return okQ && okD;
     })
     .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""));
 
+  // Vaciar tabla
   tbody.innerHTML = "";
 
-  if(rows.length===0){
+  // Si no hay filas, mensaje + meta y salir
+  if (rows.length === 0){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="9" class="muted" style="text-align:center">No hay movimientos para este filtro.</td>`;
     tbody.appendChild(tr);
@@ -1019,18 +1026,20 @@ function renderHistory(){
     return;
   }
 
+  // Asegurar campos mínimos (id/flow/qty) y guardar si hubo cambios
   let needSave = false;
   rows.forEach(m=>{
-    if(!m.id){ m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7))); needSave = true; }
-    if(!m.flow){ m.flow = 'entrada'; needSave = true; }
-    if(m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); needSave = true; }
+    if (!m.id){ m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7))); needSave = true; }
+    if (!m.flow){ m.flow = 'entrada'; needSave = true; }
+    if (m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); needSave = true; }
   });
-  if(needSave) saveAll();
+  if (needSave) saveAll();
 
+  // Pintar filas
   rows.forEach(m=>{
     const d = m.dateISO ? new Date(m.dateISO) : new Date();
-    const sDelta = signedDelta(m);
-    const sDeltaTxt = sDelta>0 ? ('+'+sDelta) : String(sDelta);
+    const sDelta = signedDelta(m);                                  // usa helpers
+    const sDeltaTxt = sDelta > 0 ? ('+' + sDelta) : String(sDelta); // +N / -N / 0
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1048,17 +1057,17 @@ function renderHistory(){
           <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
         </select>
       </td>
- <td>
-  <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
-    <i class="fa fa-trash"></i> Eliminar
-  </button>
-</td>
+      <td>
+        <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
+          <i class="fa fa-trash"></i> Eliminar
+        </button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 
-  // Resumen (meta)
-  const sumDelta = rows.reduce((acc,m)=> acc + signedDelta(m), 0);
+  // Meta/resumen bajo el título del acordeón de Movimientos
+  const sumDelta = rows.reduce((acc, m)=> acc + signedDelta(m), 0);
   const meta = document.getElementById('movsMeta');
   if (meta){
     meta.textContent = `${rows.length} movs · ΣΔ ${sumDelta}`;
@@ -2041,11 +2050,15 @@ try { if (typeof migrateMovesFlow === 'function') migrateMovesFlow(); } catch(_)
   });
 })();
 /* ===== Utilidades ===== */
-// === Delta firmado según el "flujo" del movimiento (entrada/salida/devolucion)
+// Firmado “neutral” para SALIDA:
+// - entrada  => +qty
+// - salida   => 0   (neutraliza la entrada original)
+// - devolución => +qty
 function signedDelta(m){
   const qty  = Math.abs(Number(m.delta ?? m.qty) || 0);
-  const flow = (m.flow || 'entrada'); // por defecto entrada para movs antiguos
-  return flow === 'salida' ? -qty : qty; // devolucion = +qty
+  const flow = (m.flow || 'entrada');
+  if (flow === 'salida') return 0;   // <-- clave: no resta, solo neutraliza
+  return qty; // entrada o devolución suman
 }
 
 // --- Acción al cambiar flujo ---
