@@ -2292,6 +2292,8 @@ function deleteMove(moveId){
     buffer += ev.key;
   }, true);
 })();
+</script>
+
 <script>
 // === RESCATE TABS (robusto y con seguro) ===
 (function(){
@@ -2341,7 +2343,6 @@ function deleteMove(moveId){
     'registrar';
   showTab(initialId);
 })();
-</script>
 </script>
 </body>
 </html>
