@@ -709,22 +709,24 @@ function exportAllMoves(){
     alert("No hay movimientos para exportar.");
     return;
   }
-  const headers = ["Fecha","Hora","Código","SKU","Modelo","Tela","Delta","Tipo"];
-  const rows = [...moves]
-    .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""))
-    .map(m=>{
-      const d = m.dateISO ? new Date(m.dateISO) : new Date();
-      return [
-        d.toLocaleDateString(),
-        d.toLocaleTimeString(),
-        m.code,
-        m.sku || "",
-        m.nombre,
-        m.tela,
-        Number(m.delta)||0,
-        m.type
-      ];
-    });
+const headers = ["Fecha","Hora","Código","SKU","Modelo","Tela","Δ (firmado)","Flow","Tipo"];
+const rows = [...moves]
+  .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""))
+  .map(m=>{
+    const d = m.dateISO ? new Date(m.dateISO) : new Date();
+    const sd = signedDelta(m);
+    return [
+      d.toLocaleDateString(),
+      d.toLocaleTimeString(),
+      m.code,
+      m.sku || "",
+      m.nombre,
+      m.tela,
+      sd,
+      m.flow || 'entrada',
+      m.type
+    ];
+  });
   downloadCSV("inventario_movimientos_COMPLETO.csv", headers, rows);
 }
 
@@ -1012,6 +1014,8 @@ function renderHistory(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="9" class="muted" style="text-align:center">No hay movimientos para este filtro.</td>`;
     tbody.appendChild(tr);
+    const meta0 = document.getElementById('movsMeta');
+    if (meta0) meta0.textContent = `0 movs · ΣΔ 0`;
     return;
   }
 
@@ -1052,9 +1056,9 @@ function renderHistory(){
     `;
     tbody.appendChild(tr);
   });
-}
 
-  // Meta del summary de Movimientos
+  // Resumen (meta)
+  const sumDelta = rows.reduce((acc,m)=> acc + signedDelta(m), 0);
   const meta = document.getElementById('movsMeta');
   if (meta){
     meta.textContent = `${rows.length} movs · ΣΔ ${sumDelta}`;
@@ -1112,11 +1116,22 @@ function exportFilteredHistory(){
     .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""));
   if(rows.length===0){ alert("No hay movimientos para exportar con el filtro actual."); return; }
 
-  const headers = ["Fecha","Hora","Código","SKU","Modelo","Tela","Delta","Tipo"];
-  const data = rows.map(m=>{
-    const d = new Date(m.dateISO||Date.now());
-    return [ d.toLocaleDateString(), d.toLocaleTimeString(), m.code, m.sku||"", m.nombre, m.tela, m.delta, m.type ];
-  });
+ const headers = ["Fecha","Hora","Código","SKU","Modelo","Tela","Δ (firmado)","Flow","Tipo"];
+const data = rows.map(m=>{
+  const d = new Date(m.dateISO||Date.now());
+  const sd = signedDelta(m);
+  return [
+    d.toLocaleDateString(),
+    d.toLocaleTimeString(),
+    m.code,
+    m.sku || "",
+    m.nombre,
+    m.tela,
+    sd,
+    m.flow || 'entrada',
+    m.type
+  ];
+});
   downloadCSV("inventario_historial_filtrado.csv", headers, data);
 }
 
@@ -1136,16 +1151,19 @@ document.getElementById('btnStartCount').addEventListener('click', ()=>{
     });
   }
 
-  // 3) Entradas del mes (solo deltas positivos) agrupadas por código
-  const entradasMap = new Map(); // code -> cantidad (+)
-  moves.forEach(m=>{
-    if(!m.dateISO) return;
-    const d = new Date(m.dateISO);
-    if (d >= start && d <= end && (Number(m.delta)||0) > 0) {
+// 3) Entradas del mes (solo Δ firmados > 0) agrupadas por código
+const entradasMap = new Map(); // code -> cantidad (+)
+moves.forEach(m=>{
+  if(!m.dateISO) return;
+  const d = new Date(m.dateISO);
+  if (d >= start && d <= end){
+    const sd = signedDelta(m); // usa flow
+    if (sd > 0){
       const cur = entradasMap.get(m.code)||0;
-      entradasMap.set(m.code, cur + (Number(m.delta)||0));
+      entradasMap.set(m.code, cur + sd);
     }
-  });
+  }
+});
 
   // 4) Construir buffer de conteo: unión de códigos (inicio ∪ entradas)
   const unionCodes = new Set([...inicioMap.keys(), ...entradasMap.keys()]);
@@ -2245,7 +2263,7 @@ function deleteMove(moveId){
 
   // Revertir cantidad del producto
   if(it){
-    const newQty = (parseInt(it.cantidad)||0) - (parseInt(m.delta)||0);
+const newQty = (parseInt(it.cantidad)||0) - signedDelta(m);
     it.cantidad = Math.max(0, newQty);
   }
 
