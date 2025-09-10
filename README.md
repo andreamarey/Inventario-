@@ -2292,6 +2292,56 @@ function deleteMove(moveId){
     buffer += ev.key;
   }, true);
 })();
+<script>
+// === RESCATE TABS (robusto y con seguro) ===
+(function(){
+  if (document._tabsBound) return;         // evita doble-enganche si ya existe
+  document._tabsBound = true;
+
+  window.showTab = function(id){
+    // Ocultar todas
+    document.querySelectorAll('section.card').forEach(s => s.classList.add('hidden'));
+    // Mostrar la seleccionada
+    const sec = document.getElementById(id);
+    if (sec) sec.classList.remove('hidden');
+
+    // Marcar botón activo
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+    if (btn) btn.classList.add('active');
+
+    // Hooks por pestaña (con try/catch para no romper)
+    if (id === 'escanear'){
+      try{ if (typeof initCameras === 'function') initCameras(); }catch(_){}
+    } else {
+      try{ if (typeof stopScanner === 'function') stopScanner(); }catch(_){}
+    }
+    if (id === 'etiquetas'){
+      try{ if (typeof refreshLabelSelect === 'function') refreshLabelSelect(); }catch(_){}
+    }
+    if (id === 'conteo'){
+      try{ if (typeof renderCountEditor === 'function') renderCountEditor(); }catch(_){}
+      try{ if (typeof renderSnapshotsList === 'function') renderSnapshotsList(); }catch(_){}
+    }
+  };
+
+  // Delegación de clics en las tabs
+  document.addEventListener('click', function(ev){
+    const t = ev.target.closest('.tab-btn');
+    if (!t) return;
+    ev.preventDefault();
+    const id = t.dataset.tab;
+    if (id) showTab(id);
+  }, true);
+
+  // Arranque: usa la marcada .active o 'registrar'
+  const initialId =
+    document.querySelector('.tab-btn.active')?.dataset.tab ||
+    document.querySelector('.tab-btn')?.dataset.tab ||
+    'registrar';
+  showTab(initialId);
+})();
+</script>
 </script>
 </body>
 </html>
