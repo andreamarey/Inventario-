@@ -503,7 +503,7 @@ button i {
       <summary style="cursor:pointer;font-weight:700">
         Totales (filtrados) — <span id="totalesMeta" class="muted">…</span>
       </summary>
-      <div class="scroll-wrap" 
+      <div class="scroll-wrap">
         <table class="inv-table">
           <thead>
             <tr>
@@ -527,7 +527,7 @@ button i {
       <summary style="cursor:pointer;font-weight:700">
         Historial (movimientos filtrados) — <span id="movsMeta" class="muted">…</span>
       </summary>
-      <div class="scroll-wrap" 
+      <div class="scroll-wrap">
         <table class="mov-table">
           <thead>
             <tr>
