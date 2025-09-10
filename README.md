@@ -1048,11 +1048,15 @@ function renderHistory(){
           <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
         </select>
       </td>
-      <td>
-        <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
-          <i class="fa fa-trash"></i> Eliminar
-        </button>
-      </td>
+     <td>
+  <div class="row" style="gap:6px; justify-content:flex-end">
+    <button class="btn-secondary" onclick="addSalida('${escapeJs(m.code)}')" title="Marcar salida 1">Salida</button>
+    <button class="btn-secondary" onclick="addDevol('${escapeJs(m.code)}')" title="Marcar devolución 1">Devolución</button>
+    <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
+      <i class="fa fa-trash"></i> Eliminar
+    </button>
+  </div>
+</td>
     `;
     tbody.appendChild(tr);
   });
@@ -2043,10 +2047,11 @@ try { if (typeof migrateMovesFlow === 'function') migrateMovesFlow(); } catch(_)
 /* ===== Utilidades ===== */
 // === Delta firmado según el "flujo" del movimiento (entrada/salida/devolucion)
 function signedDelta(m){
-  const qty = Math.abs(Number(m.delta ?? m.qty) || 0);
+  const qty  = Math.abs(Number(m.delta ?? m.qty) || 0);
   const flow = (m.flow || 'entrada'); // por defecto entrada para movs antiguos
   return flow === 'salida' ? -qty : qty; // devolucion = +qty
 }
+
 // --- Acción al cambiar flujo ---
 window.changeMoveFlow = function(id, newFlow){
   const m = moves.find(x=>x.id===id);
@@ -2057,7 +2062,7 @@ window.changeMoveFlow = function(id, newFlow){
 
   // actualiza flujo y asegura qty
   m.flow = newFlow;
-  m.qty = Math.abs(Number(m.delta ?? m.qty) || 0);
+  m.qty  = Math.abs(Number(m.delta ?? m.qty) || 0);
 
   // delta firmado "después"
   const newEff = signedDelta(m);
@@ -2070,7 +2075,49 @@ window.changeMoveFlow = function(id, newFlow){
 
   saveAll();
   renderInventory(); // esto refresca totales y vuelve a llamar a renderHistory()
+}; // <--- cierra aquí changeMoveFlow
+
+// === Crear movimiento nuevo de flujo (entrada/salida/devolución) y ajustar inventario
+window.addMovement = function(code, flow, qty = 1){
+  qty = Math.max(1, Number(qty)||1);
+
+  const it = items.find(i=>i.code===code);
+  if(!it){
+    alert("Producto no encontrado para crear movimiento.");
+    return;
+  }
+
+  const nowISO = new Date().toISOString();
+
+  // Registrar movimiento (dejamos delta y qty en magnitud positiva)
+  moves.push({
+    id: genId(),
+    dateISO: nowISO,
+    code: it.code,
+    sku: it.sku || "",
+    nombre: it.nombre,
+    tela: it.tela,
+    delta: qty,          // compatibilidad con lo antiguo
+    type: 'scan',        // o 'ajuste' si quieres distinguirlos
+    flow: flow,          // 'entrada' | 'salida' | 'devolucion'
+    qty:  qty
+  });
+
+  // Ajustar inventario acumulado (sin rango)
+  if (flow === 'salida'){
+    it.cantidad = Math.max(0, (Number(it.cantidad)||0) - qty);
+  } else {
+    it.cantidad = (Number(it.cantidad)||0) + qty; // entrada o devolución
+  }
+
+  saveAll();
+  renderInventory(); // esto refresca también el historial
 };
+
+// Atajos
+window.addSalida = function(code){ addMovement(code, 'salida', 1); };
+window.addDevol  = function(code){ addMovement(code, 'devolucion', 1); };
+
 // === Migración ligera: añade flow/qty a movimientos antiguos
 function migrateMovesFlow(){
   let changed = false;
