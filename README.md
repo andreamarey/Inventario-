@@ -303,7 +303,21 @@ button i { margin-right: 6px; }
   color: var(--primary-700);
   border-color: rgba(70,139,131,.25);
 }
+/* Select de flujo con color por opción seleccionada */
+.flow-select{
+  font-weight:700; border-radius:10px; padding:6px 8px;
+  border:1px solid var(--border);
+}
 
+/* Color del control (cerrado) según valor */
+.flow-select.flow-entrada{   background: var(--success-50);  color: var(--success);     border-color: rgba(16,185,129,.35); }
+.flow-select.flow-salida{    background: var(--danger-50);   color: var(--danger-600);  border-color: rgba(239,68,68,.35); }
+.flow-select.flow-devolucion{background: var(--warning-50);  color: var(--warning);     border-color: rgba(245,158,11,.35); }
+
+/* (Opcional) Colorear las opciones del menú — no todos los navegadores lo respetan */
+.flow-select option[value="entrada"]{    background: var(--success-50);  color: var(--success); }
+.flow-select option[value="salida"]{     background: var(--danger-50);   color: var(--danger-600); }
+.flow-select option[value="devolucion"]{ background: var(--warning-50);  color: var(--warning); }
 /* Layout dentro de la celda de “Tipo” en historial */
 .flow-cell{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .flow-origin{ font-size:12px; }
@@ -1078,21 +1092,19 @@ function renderHistory(){
       <td>${escapeHtml(m.nombre)}</td>
       <td>${escapeHtml(m.tela)}</td>
       <td style="text-align:right">${sDeltaTxt}</td>
-      <td>
-        <div class="flow-cell">
-          <span class="chip-flow flow-${escapeHtml(m.flow || 'entrada')}">
-            ${labelFlow(m.flow)}
-          </span>
-          <select onchange="changeMoveFlow('${escapeJs(m.id)}', this.value)">
-            <option value="entrada" ${m.flow==='entrada'?'selected':''}>Entrada</option>
-            <option value="salida" ${m.flow==='salida'?'selected':''}>Salida</option>
-            <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
-          </select>
-          <span class="chip chip-${escapeHtml(m.type)}">
-            ${escapeHtml(m.type)}
-          </span>
-        </div>
-      </td>
+   <td>
+  <div class="flow-cell">
+    <select
+      id="flowSel_${escapeHtml(m.id)}"
+      class="flow-select flow-${escapeHtml(m.flow || 'entrada')}"
+      onchange="changeMoveFlow('${escapeJs(m.id)}', this.value)">
+      <option value="entrada" ${m.flow==='entrada'?'selected':''}>Entrada</option>
+      <option value="salida" ${m.flow==='salida'?'selected':''}>Salida</option>
+      <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
+    </select>
+    <span class="chip chip-${escapeHtml(m.type)}">${escapeHtml(m.type)}</span>
+  </div>
+</td>
       <td>
         <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
           <i class="fa fa-trash"></i> Eliminar
@@ -2096,7 +2108,11 @@ function signedDelta(m){
   if (flow === 'salida') return 0;   // <-- clave: no resta, solo neutraliza
   return qty; // entrada o devolución suman
 }
-
+function setFlowSelectColor(sel, flow){
+  if(!sel) return;
+  sel.classList.remove('flow-entrada','flow-salida','flow-devolucion');
+  sel.classList.add('flow-'+(flow||'entrada'));
+}
 // --- Acción al cambiar flujo ---
 window.changeMoveFlow = function(id, newFlow){
   const m = moves.find(x=>x.id===id);
@@ -2116,7 +2132,9 @@ window.changeMoveFlow = function(id, newFlow){
   const it = items.find(i=>i.code===m.code);
   if(it){
     it.cantidad = (Number(it.cantidad)||0) - oldEff + newEff;
-  }
+}
+const sel = document.getElementById('flowSel_'+id);
+if (sel) setFlowSelectColor(sel, newFlow);
 
   saveAll();
   renderInventory(); // esto refresca totales y vuelve a llamar a renderHistory()
