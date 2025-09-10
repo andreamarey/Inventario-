@@ -1048,14 +1048,10 @@ function renderHistory(){
           <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
         </select>
       </td>
-     <td>
-  <div class="row" style="gap:6px; justify-content:flex-end">
-    <button class="btn-secondary" onclick="addSalida('${escapeJs(m.code)}')" title="Marcar salida 1">Salida</button>
-    <button class="btn-secondary" onclick="addDevol('${escapeJs(m.code)}')" title="Marcar devolución 1">Devolución</button>
-    <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
-      <i class="fa fa-trash"></i> Eliminar
-    </button>
-  </div>
+ <td>
+  <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
+    <i class="fa fa-trash"></i> Eliminar
+  </button>
 </td>
     `;
     tbody.appendChild(tr);
