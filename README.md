@@ -277,6 +277,36 @@ button i { margin-right: 6px; }
 .mov-table tbody tr:hover{
   background: var(--row-hover);
 }
+/* Chips de FLUJO (Entrada / Salida / Devolución) */
+.chip-flow{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:12px;
+  line-height:1.6;
+  font-weight:700;
+  border:1px solid transparent;
+}
+
+.flow-entrada{
+  background: var(--success-50);
+  color: var(--success);
+  border-color: rgba(16,185,129,.25);
+}
+.flow-salida{
+  background: var(--danger-50);
+  color: var(--danger);
+  border-color: rgba(239,68,68,.25);
+}
+.flow-devolucion{
+  background: var(--primary-50);
+  color: var(--primary-700);
+  border-color: rgba(70,139,131,.25);
+}
+
+/* Layout dentro de la celda de “Tipo” en historial */
+.flow-cell{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.flow-origin{ font-size:12px; }
 
 /* =====================  Etiqueta / vista previa (SIN LOGO) ===================== */
 .label-preview{
@@ -996,28 +1026,21 @@ function renderInventory(){
 }
 function renderHistory(){
   const tbody = document.getElementById('historyTableBody');
-  if (!tbody) return;
+  if(!tbody) return;
 
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
-
-  // Filtrar por texto y rango de fechas, ordenar por fecha desc
   const rows = moves
     .filter(m=>{
-      const okQ = !q ||
-        (m.nombre || "").toLowerCase().includes(q) ||
-        (m.tela   || "").toLowerCase().includes(q) ||
-        (m.sku    || "").toLowerCase().includes(q) ||
-        (m.code   || "").toLowerCase().includes(q);
+      const okQ = !q || m.nombre.toLowerCase().includes(q) || m.tela.toLowerCase().includes(q) ||
+                        (m.sku||"").toLowerCase().includes(q) || m.code.toLowerCase().includes(q);
       const okD = inRange(m.dateISO);
       return okQ && okD;
     })
     .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""));
 
-  // Vaciar tabla
   tbody.innerHTML = "";
 
-  // Si no hay filas, mensaje + meta y salir
-  if (rows.length === 0){
+  if(rows.length===0){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="9" class="muted" style="text-align:center">No hay movimientos para este filtro.</td>`;
     tbody.appendChild(tr);
@@ -1026,20 +1049,25 @@ function renderHistory(){
     return;
   }
 
-  // Asegurar campos mínimos (id/flow/qty) y guardar si hubo cambios
+  // Migración ligera por si faltan campos en registros antiguos
   let needSave = false;
   rows.forEach(m=>{
-    if (!m.id){ m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7))); needSave = true; }
-    if (!m.flow){ m.flow = 'entrada'; needSave = true; }
-    if (m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); needSave = true; }
+    if(!m.id){ m.id = (typeof genId === 'function' ? genId() : ('mv_'+Date.now()+Math.random().toString(36).slice(2,7))); needSave = true; }
+    if(!m.flow){ m.flow = 'entrada'; needSave = true; }
+    if(m.qty == null){ m.qty = Math.abs(Number(m.delta)||0); needSave = true; }
   });
-  if (needSave) saveAll();
+  if(needSave) saveAll();
 
-  // Pintar filas
+  const labelFlow = (f)=>{
+    if(f==='salida') return 'Salida';
+    if(f==='devolucion') return 'Devolución';
+    return 'Entrada';
+  };
+
   rows.forEach(m=>{
     const d = m.dateISO ? new Date(m.dateISO) : new Date();
-    const sDelta = signedDelta(m);                                  // usa helpers
-    const sDeltaTxt = sDelta > 0 ? ('+' + sDelta) : String(sDelta); // +N / -N / 0
+    const sDelta = signedDelta(m);
+    const sDeltaTxt = sDelta>0 ? ('+'+sDelta) : String(sDelta);
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1051,11 +1079,19 @@ function renderHistory(){
       <td>${escapeHtml(m.tela)}</td>
       <td style="text-align:right">${sDeltaTxt}</td>
       <td>
-        <select onchange="changeMoveFlow('${escapeJs(m.id)}', this.value)">
-          <option value="entrada" ${m.flow==='entrada'?'selected':''}>Entrada</option>
-          <option value="salida" ${m.flow==='salida'?'selected':''}>Salida</option>
-          <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
-        </select>
+        <div class="flow-cell">
+          <span class="chip-flow flow-${escapeHtml(m.flow || 'entrada')}">
+            ${labelFlow(m.flow)}
+          </span>
+          <select onchange="changeMoveFlow('${escapeJs(m.id)}', this.value)">
+            <option value="entrada" ${m.flow==='entrada'?'selected':''}>Entrada</option>
+            <option value="salida" ${m.flow==='salida'?'selected':''}>Salida</option>
+            <option value="devolucion" ${m.flow==='devolucion'?'selected':''}>Devolución</option>
+          </select>
+          <span class="chip chip-${escapeHtml(m.type)}">
+            ${escapeHtml(m.type)}
+          </span>
+        </div>
       </td>
       <td>
         <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
@@ -1066,8 +1102,8 @@ function renderHistory(){
     tbody.appendChild(tr);
   });
 
-  // Meta/resumen bajo el título del acordeón de Movimientos
-  const sumDelta = rows.reduce((acc, m)=> acc + signedDelta(m), 0);
+  // Resumen (meta)
+  const sumDelta = rows.reduce((acc,m)=> acc + signedDelta(m), 0);
   const meta = document.getElementById('movsMeta');
   if (meta){
     meta.textContent = `${rows.length} movs · ΣΔ ${sumDelta}`;
