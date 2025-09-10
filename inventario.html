@@ -362,6 +362,46 @@ button i { margin-right: 6px; }
 button i {
   margin-right: 6px;
 }
+/* Barra de filtros fija dentro del card de Inventario */
+#inventario .filters-bar{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card);
+  margin: -24px -24px 12px -24px;     /* come el padding del .card para que se vea “al ras” */
+  padding: 12px 24px 10px 24px;
+  border-bottom: 1px solid var(--border);
+}
+/* Paneles desplegables */
+.inv-accordion details{
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+.inv-accordion summary{
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.inv-accordion summary::-webkit-details-marker{ display:none; }
+.inv-accordion summary .meta{ color: var(--muted); font-weight: 600; }
+
+/* Contenido del panel */
+.inv-accordion .panel-body{
+  padding: 10px 12px 14px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Contenedor con scroll para las tablas */
+.scroll-wrap{
+  max-height: 360px;     /* ajusta si necesitas más/menos alto visible */
+  overflow: auto;
+  border-radius: 12px;
+}
 </style>
 </head>
 <body>
@@ -421,66 +461,82 @@ button i {
   </section>
 
   <!-- Inventario -->
-  <section id="inventario" class="card hidden">
-    <h2>Inventario</h2>
+<!-- Inventario -->
+<section id="inventario" class="card hidden">
+  <h2>Inventario</h2>
 
-    <div class="row">
+  <!-- Filtros fijos (sticky) -->
+  <div class="filters-bar" style="position:sticky;top:0;background:var(--card);border:1px solid var(--border);padding:8px 12px;border-radius:10px;z-index:2;">
+    <div class="row" style="margin:0">
       <input id="searchInput" placeholder="Buscar por modelo, tela, SKU o código" oninput="renderInventory(); renderHistory();">
     </div>
-
-    <div class="row" style="margin-top:6px">
+    <div class="row" style="margin:6px 0 0">
       <label style="flex:1">Desde: <input type="date" id="dateFrom" onchange="renderInventory(); renderHistory();"></label>
       <label style="flex:1">Hasta: <input type="date" id="dateTo" onchange="renderInventory(); renderHistory();"></label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="exportFilteredTotals()">
+          <i class="fa fa-file-export"></i> Exportar CSV (Totales Filtrados)
+        </button>
+        <button onclick="exportFilteredHistory()" class="btn-secondary">
+          <i class="fa fa-file-export"></i> Exportar CSV (Historial Filtrado)
+        </button>
+      </div>
     </div>
+  </div>
 
-    <div class="row" style="margin-top:6px">
-  <button onclick="exportFilteredTotals()">
-    <i class="fa fa-file-export"></i> Exportar CSV (Totales Filtrados)
-  </button>
-  <button onclick="exportFilteredHistory()" class="btn-secondary">
-    <i class="fa fa-file-export"></i> Exportar CSV (Historial Filtrado)
-  </button>
-</div>
+  <!-- Acordeón: Totales / Movimientos -->
+  <div class="inv-accordion" style="margin-top:12px">
+    <details open>
+      <summary style="cursor:pointer;font-weight:700">
+        Totales (filtrados) — <span id="totalesMeta" class="muted">…</span>
+      </summary>
+      <div class="scroll-wrap" style="max-height:45vh; overflow:auto; margin-top:8px;">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Modelo</th>
+              <th>Tela</th>
+              <th>SKU</th>
+              <th>Código</th>
+              <th style="text-align:right">Cantidad</th>
+              <th>Fecha</th>
+              <th style="text-align:center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-  <h3 style="margin-top:14px">Totales (filtrados)</h3>
-
-<table class="inv-table">
-  <thead>
-    <tr>
-      <th>Modelo</th>
-      <th>Tela</th>
-      <th>SKU</th>
-      <th>Código</th>
-      <th style="text-align:right">Cantidad</th>
-      <th>Fecha</th>
-      <th style="text-align:center">Acciones</th>
-    </tr>
-  </thead>
-  <tbody id="inventoryTableBody">
-    <!-- Se llena dinámicamente -->
-  </tbody>
-</table>
-
-   <h3 style="margin-top:14px">Historial (movimientos filtrados)</h3>
-<table class="mov-table">
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Hora</th>
-      <th>Código</th>
-      <th>SKU</th>
-      <th>Modelo</th>
-      <th>Tela</th>
-      <th style="text-align:right">Δ</th>
-      <th>Tipo</th>
-      <th style="text-align:center">Acciones</th>
-    </tr>
-  </thead>
-  <tbody id="historyTableBody">
-    <!-- Se llena dinámicamente -->
-  </tbody>
-</table>
-  </section>
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:700">
+        Historial (movimientos filtrados) — <span id="movsMeta" class="muted">…</span>
+      </summary>
+      <div class="scroll-wrap" style="max-height:45vh; overflow:auto; margin-top:8px;">
+        <table class="mov-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Código</th>
+              <th>SKU</th>
+              <th>Modelo</th>
+              <th>Tela</th>
+              <th style="text-align:right">Δ</th>
+              <th>Tipo</th>
+              <th style="text-align:center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
 
   <!-- Conteo mensual -->
   <section id="conteo" class="card hidden">
@@ -794,17 +850,29 @@ function inRange(iso){
   }
   return true;
 }
+// ¿Hay al menos una fecha activa?
 function hasActiveDateRange(){
-  const f = document.getElementById('dateFrom')?.value;
-  const t = document.getElementById('dateTo')?.value;
-  return !!(f || t);
+  const from = document.getElementById('dateFrom')?.value;
+  const to   = document.getElementById('dateTo')?.value;
+  return !!(from || to);
 }
+
+// Suma de movimientos (Δ) para un código dentro del rango activo
 function qtyInActiveRangeByCode(code){
+  const fromVal = document.getElementById('dateFrom')?.value || null;
+  const toVal   = document.getElementById('dateTo')?.value   || null;
+
+  const start = fromVal ? new Date(fromVal + "T00:00:00") : null;
+  const end   = toVal   ? new Date(toVal   + "T23:59:59.999") : null;
+
   let total = 0;
-  for (const m of moves){
-    if (m.code === code && inRange(m.dateISO)){
-      total += Number(m.delta) || 0;
-    }
+  for(const m of moves){
+    if(m.code !== code) continue;
+    const d = m.dateISO ? new Date(m.dateISO) : null;
+    if(!d) continue;
+    if(start && d < start) continue;
+    if(end   && d > end)   continue;
+    total += (Number(m.delta) || 0);
   }
   return total;
 }
@@ -826,7 +894,7 @@ function renderInventory(){
   const qtyTh = document.querySelector('.inv-table thead th:nth-child(5)');
   if (qtyTh) qtyTh.textContent = hasRange ? 'Cantidad (en rango)' : 'Cantidad';
 
-  // Base: filtrar por texto
+  // Base: filtrar por texto (ordenado por fecha de alta)
   let base = items.filter(i=> byText(i))
                   .sort((a,b)=>(b.createdISO||"").localeCompare(a.createdISO||""));
 
@@ -836,49 +904,54 @@ function renderInventory(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="7" class="muted" style="text-align:center">No hay resultados con el filtro actual.</td>`;
     tbody.appendChild(tr);
-    renderHistory(); // mantener sincronizado
+    // aun así refrescamos el historial para mantener sincronía
+    renderHistory();
+    // meta de Totales
+    const meta = document.getElementById('totalesMeta');
+    if (meta) meta.textContent = `0 ítems · 0 piezas`;
     return;
   }
 
-  // Si hay rango de fechas activo, recalculamos cantidad por movimientos en el rango
+  let totalPzas = 0;
+  let rowsPintadas = 0;
+
   if (hasRange){
-    // Si quieres ocultar filas con 0 en el rango, deja el filtro de >0.
-    // Si prefieres mostrarlas con 0, elimina el .filter(...)
+    // Recalcula cantidad por Δ en el rango
     const withRangeQty = base.map(i=>{
       const qty = qtyInActiveRangeByCode(i.code);
       return { ...i, _qtyRange: qty };
     })
-    .filter(i => i._qtyRange > 0); // <- quita este filtro si quieres mostrar también 0
+    .filter(i => i._qtyRange > 0); // quita este filtro si quieres ver también 0
 
     if (withRangeQty.length === 0){
       const tr = document.createElement('tr');
       tr.innerHTML = `<td colspan="7" class="muted" style="text-align:center">Sin movimientos en el rango seleccionado.</td>`;
       tbody.appendChild(tr);
-      renderHistory();
-      return;
+    } else {
+      withRangeQty.forEach(i=>{
+        const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(i.nombre)}</td>
+          <td>${escapeHtml(i.tela)}</td>
+          <td>${escapeHtml(i.sku||'')}</td>
+          <td>${escapeHtml(i.code)}</td>
+          <td style="text-align:right">${i._qtyRange}</td>
+          <td>${escapeHtml(dateTxt)}</td>
+          <td>
+            <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
+              <i class="fa fa-trash"></i> Eliminar
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      rowsPintadas = withRangeQty.length;
+      totalPzas = withRangeQty.reduce((a,x)=>a+(Number(x._qtyRange)||0),0);
     }
 
-    withRangeQty.forEach(i=>{
-      const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHtml(i.nombre)}</td>
-        <td>${escapeHtml(i.tela)}</td>
-        <td>${escapeHtml(i.sku||'')}</td>
-        <td>${escapeHtml(i.code)}</td>
-        <td style="text-align:right">${i._qtyRange}</td>
-        <td>${escapeHtml(dateTxt)}</td>
-        <td>
-          <button class="btn-del" onclick="deleteItem('${escapeJs(i.code)}')" title="Eliminar producto">
-            <i class="fa fa-trash"></i> Eliminar
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
   }else{
-    // Sin rango de fechas: stock acumulado como antes
+    // Sin rango: muestra stock acumulado (como antes)
     base.forEach(i=>{
       const dateTxt = i.createdISO ? new Date(i.createdISO).toLocaleDateString() : "";
       const tr = document.createElement('tr');
@@ -897,6 +970,14 @@ function renderInventory(){
       `;
       tbody.appendChild(tr);
     });
+    rowsPintadas = base.length;
+    totalPzas = base.reduce((a,x)=>a+(Number(x.cantidad)||0),0);
+  }
+
+  // Meta del summary de Totales
+  const meta = document.getElementById('totalesMeta');
+  if (meta){
+    meta.textContent = `${rowsPintadas} ítems · ${totalPzas} piezas${hasRange ? ' (en rango)' : ''}`;
   }
 
   // Mantén el historial sincronizado con los mismos filtros
@@ -911,7 +992,7 @@ function renderHistory(){
     .filter(m=>{
       const okQ = !q || m.nombre.toLowerCase().includes(q) || m.tela.toLowerCase().includes(q) ||
                         (m.sku||"").toLowerCase().includes(q) || m.code.toLowerCase().includes(q);
-      const okD = inRange(m.dateISO);
+      const okD = inRange(m.dateISO); // tu helper existente
       return okQ && okD;
     })
     .sort((a,b)=>(b.dateISO||"").localeCompare(a.dateISO||""));
@@ -922,6 +1003,9 @@ function renderHistory(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="9" class="muted" style="text-align:center">No hay movimientos para este filtro.</td>`;
     tbody.appendChild(tr);
+    // meta
+    const meta = document.getElementById('movsMeta');
+    if (meta) meta.textContent = `0 movs · ΣΔ 0`;
     return;
   }
 
@@ -935,30 +1019,39 @@ function renderHistory(){
   });
   if(needSave) saveAll();
 
+  let sumDelta = 0;
+
   rows.forEach(m=>{
     const d = m.dateISO ? new Date(m.dateISO) : new Date();
-const tr = document.createElement('tr');
-tr.innerHTML = `
-  <td>${d.toLocaleDateString()}</td>
-  <td>${d.toLocaleTimeString()}</td>
-  <td>${escapeHtml(m.code)}</td>
-  <td>${escapeHtml(m.sku||'')}</td>
-  <td>${escapeHtml(m.nombre)}</td>
-  <td>${escapeHtml(m.tela)}</td>
-  <td style="text-align:right">${m.delta>0? '+'+m.delta : m.delta}</td>
-<td>
-  <span class="chip chip-${escapeHtml(m.type)}">
-    ${escapeHtml(m.type)}
-  </span>
-</td>
-  <td>
-    <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
-      <i class="fa fa-trash"></i> Eliminar
-    </button>
-  </td>
-`;
-tbody.appendChild(tr);
+    sumDelta += (Number(m.delta)||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.toLocaleDateString()}</td>
+      <td>${d.toLocaleTimeString()}</td>
+      <td>${escapeHtml(m.code)}</td>
+      <td>${escapeHtml(m.sku||'')}</td>
+      <td>${escapeHtml(m.nombre)}</td>
+      <td>${escapeHtml(m.tela)}</td>
+      <td style="text-align:right">${m.delta>0? '+'+m.delta : m.delta}</td>
+      <td>
+        <span class="chip chip-${escapeHtml(m.type)}">
+          ${escapeHtml(m.type)}
+        </span>
+      </td>
+      <td>
+        <button class="btn-del-mov" onclick="deleteMove('${escapeJs(m.id)}')" title="Eliminar movimiento">
+          <i class="fa fa-trash"></i> Eliminar
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
   });
+
+  // Meta del summary de Movimientos
+  const meta = document.getElementById('movsMeta');
+  if (meta){
+    meta.textContent = `${rows.length} movs · ΣΔ ${sumDelta}`;
+  }
 }
 function exportFilteredTotals(){
   const q = (document.getElementById('searchInput')?.value || "").toLowerCase();
